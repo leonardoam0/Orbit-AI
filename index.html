@@ -170,12 +170,12 @@
                 </div>
                 <div class="min-w-0">
                     <div class="flex items-center gap-2">
-                        <span class="text-sm font-medium text-app-textLight">Devin</span>
+                        <span class="text-sm font-medium text-app-textLight">Orbit Assistant</span>
                         <div class="flex items-center gap-1.5 text-xs text-app-text bg-white/5 px-2 py-0.5 rounded-full border border-white/10">
                             <span class="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse-soft"></span> Online
                         </div>
                     </div>
-                    <div class="text-xs text-app-text">Engenheiro de Software IA</div>
+                    <div class="text-xs text-app-text">Agente da sua workspace</div>
                 </div>
             </div>
 
@@ -217,7 +217,7 @@
                     <i class="ph-fill ph-robot text-3xl"></i>
                 </div>
                 <h2 class="text-app-textLight text-lg font-medium">Como posso ajudar hoje?</h2>
-                <p class="text-sm text-app-text mt-1 mb-6 max-w-sm">Pergunte qualquer coisa ou parta de uma sugestão — o Devin responde com fontes e código.</p>
+                <p class="text-sm text-app-text mt-1 mb-6 max-w-sm">Pergunte qualquer coisa ou parta de uma sugestão — o Orbit Assistant responde com o modelo e as ferramentas configuradas.</p>
                 <div id="suggestChips" class="flex flex-wrap items-center justify-center gap-2 max-w-md"></div>
             </div>
 
@@ -247,7 +247,7 @@
                                 <i class="ph ph-microphone"></i>
                             </button>
                             <button id="btnProvider" class="hidden sm:flex items-center gap-1.5 text-[11px] text-app-text hover:text-app-textLight bg-white/5 hover:bg-white/10 px-2.5 py-1.5 rounded-lg transition-colors border border-transparent hover:border-white/10" title="Provedor de IA">
-                                <span class="w-1.5 h-1.5 rounded-full bg-app-accent animate-pulse-soft"></span> <span id="providerLabel">Simulação local</span>
+                                <span class="w-1.5 h-1.5 rounded-full bg-app-accent animate-pulse-soft"></span> <span id="providerLabel">Login necessário</span>
                             </button>
                         </div>
 
@@ -368,8 +368,8 @@
                         <label class="flex items-start gap-3 p-3 rounded-xl border border-app-border bg-white/[0.02] cursor-pointer hover:border-white/20 transition-colors" data-mode="api">
                             <input type="radio" name="providerMode" value="api" class="mt-1 accent-[#c0ff2d]">
                             <span>
-                                <span class="block text-sm text-app-textLight font-medium">API compatível (OpenAI)</span>
-                                <span class="block text-xs text-app-text mt-0.5">OpenAI, OpenRouter, Ollama local ou qualquer endpoint /chat/completions.</span>
+                                <span class="block text-sm text-app-textLight font-medium">Adicionar provedor</span>
+                                <span class="block text-xs text-app-text mt-0.5">OpenAI, OpenRouter, Anthropic, SGLang/vLLM ou qualquer endpoint compatível.</span>
                             </span>
                             <i class="ph-fill ph-check-circle text-app-accent ml-auto mt-0.5 mode-check hidden"></i>
                         </label>
