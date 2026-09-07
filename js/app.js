@@ -29,94 +29,6 @@
 
   const CREDIT_TOTAL = 20000;
 
-  const SIM_RESPONSES = {
-    nextjs: [
-      'Boas práticas para estruturar projetos Next.js em times grandes',
-      '',
-      'Em projetos Next.js de grande escala, uma boa arquitetura melhora a manutenibilidade, colaboração e escalabilidade. Abaixo estão práticas recomendadas que funcionam bem na maioria dos casos.',
-      '',
-      '1. **Estruture por domínio (Feature-Based)** — organize por funcionalidades de negócio, não por tipo de arquivo.',
-      '2. **Separe responsabilidades** — mantenha UI, regras de negócio, dados e utilitários bem isolados.',
-      '3. **Padronize convenções** — use ESLint, Prettier, TypeScript e commits convencionais.',
-      '4. **Testes automatizados** — unitários, integração e E2E garantem qualidade e segurança.',
-      '',
-      '```tree',
-      'src/',
-      '  app/',
-      '    (marketing)/',
-      '      page.tsx',
-      '    (dashboard)/',
-      '      layout.tsx',
-      '      page.tsx',
-      '  components/',
-      '  features/',
-      '    users/',
-      '      components/',
-      '      hooks/',
-      '      services/',
-      '    billing/',
-      '  lib/',
-      '  styles/',
-      '```',
-      '',
-      'Fontes principais: nextjs.org/docs, vercel.com, comunidade Next.js, repositórios públicos.',
-    ].join('\n'),
-    launch: [
-      'Plano de lançamento para seu SaaS (visão inicial)',
-      '',
-      '## Fase 0 — Validação',
-      '- Defina o problema central e o ICP (Ideal Customer Profile)',
-      '- Construa 10 entrevistas com usuários-alvo',
-      '- Defina métricas de sucesso (ativação, retenção a 30 dias)',
-      '',
-      '## Fase 1 — Beta privado',
-      '- Onboarding guiado com 3 passos iniciais',
-      '- Feedback semanal estruturado (1:1 com 5 contas âncora)',
-      '- Medição de coorte e churn por semana',
-      '',
-      '## Fase 2 — Lançamento público',
-      '- Campanha de 14 dias com prova social dos clientes âncora',
-      '- Pricing ancorado no valor entregue, não em custo',
-      '- Funil de upgrade com gatilho de valor (usou X vezes)',
-      '',
-      'Quer que eu detalhe alguma fase com métricas e cronograma?',
-    ].join('\n'),
-    refactor: [
-      'Refatoração de endpoint REST: passo a passo',
-      '',
-      '## 1. Antes de mexer — proteja o comportamento',
-      '- Escreva testes de contrato (ex. Pact) ou testes de integração cobrindo os casos atuais',
-      '- Documente o estado atual: status codes, headers, formatos de erro',
-      '',
-      '## 2. Extraia a lógica',
-      '- Separe **handler → service → repository**',
-      '- O handler valida e traduz; o service tem as regras; o repository trata dados',
-      '',
-      "```ts",
-      '// service.ts',
-      "export function getUserOrders(userId: string) {",
-      '  return orderRepo.findByUser(userId).then(applyPolicies);',
-      "}",
-      '```',
-      '',
-      '## 3. Itere com feature flags',
-      '- Deploya a nova rota em paralelo (`/v2/orders`)',
-      '- Migra tráfego em % gradual, monitorando erros',
-      '',
-      'Qual framework você usa (Express, NestJS, Fastify)? Posso adaptar o exemplo.',
-    ].join('\n'),
-    generic: [
-      'Estou em **modo de simulação local**: sem uma API conectada, minhas respostas vêm de exemplos embutidos na plataforma.',
-      '',
-      'Para respostas geradas em tempo real, acesse **Configurações → Provedor de IA** e conecte uma API compatível:',
-      '- OpenAI / OpenRouter (chave + modelo)',
-      '- Ollama local (`http://localhost:11434/v1`)',
-      '- Qualquer endpoint compatível com `/chat/completions`',
-      '',
-      'Enquanto isso, posso ajudar com arquitetura, código de exemplo e boas práticas nos temas que você trouxer.',
-    ].join('\n'),
-  };
-
   /* ----------------------------------------------------------
      Estado persistido
   ---------------------------------------------------------- */
@@ -151,6 +63,7 @@
   }
 
   let state = loadState() || seedState();
+  if (state.provider?.mode === 'sim') state = seedState();
   state.backend = state.backend || { workspaceId: null, agentId: null, providerId: null };
   state.provider = { mode: 'backend', baseUrl: state.provider?.baseUrl || '', model: state.provider?.model || '', apiKey: '', credentialId: state.provider?.credentialId || null };
   state.activeId = state.activeId || state.conversations[0]?.id || null;
@@ -227,68 +140,6 @@
      Providers
   ---------------------------------------------------------- */
   let generation = { stop: false, controller: null };
-
-  async function pickSimResponse(text) {
-    const t = text.toLowerCase();
-    if (/next|nextjs|react server|vite|webpack|monorepo/.test(t)) return SIM_RESPONSES.nextjs;
-    if (/planej|plano|lan[çc]amento|marketing|s?aas|produto/.test(t)) return SIM_RESPONSES.launch;
-    if (/refator|endpoint|rest|api|rotas?/.test(t)) return SIM_RESPONSES.refactor;
-    return SIM_RESPONSES.generic;
-  }
-
-  async function streamSimulated(text, onDelta, isStopCheck) {
-    const answer = await pickSimResponse(text);
-    const words = answer.split(/(\s+)/);
-    await new Promise((r) => setTimeout(r, reducedMotion ? 0 : 700));
-    let buf = '';
-    for (let i = 0; i < words.length; i++) {
-      if (isStopCheck()) { throw new StopError(); }
-      buf += words[i];
-      onDelta(buf);
-      if (i % 3 === 0) await new Promise((r) => setTimeout(r, reducedMotion ? 0 : 28));
-    }
-  }
-
-  async function streamApi(messages, onDelta, isStopCheck) {
-    const p = state.provider;
-    const ctrl = new AbortController();
-    generation.controller = ctrl;
-    const url = p.baseUrl.replace(/\/+$/, '') + '/chat/completions';
-    const res = await fetch(url, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + p.apiKey },
-      body: JSON.stringify({ model: p.model, messages, stream: true }),
-      signal: ctrl.signal,
-    });
-    if (!res.ok) {
-      let msg = 'HTTP ' + res.status;
-      try { const j = await res.json(); msg = j.error?.message || msg; } catch (e) { /* ignore */ }
-      throw new ProviderError(msg, res.status);
-    }
-    const reader = res.body.getReader();
-    const decoder = new TextDecoder();
-    let buf = '';
-    let out = '';
-    while (true) {
-      const { done, value } = await reader.read();
-      if (done) break;
-      buf += decoder.decode(value, { stream: true });
-      const lines = buf.split('\n');
-      buf = lines.pop();
-      for (const line of lines) {
-        const s = line.trim();
-        if (!s.startsWith('data:')) continue;
-        const data = s.slice(5).trim();
-        if (data === '[DONE]') return { content: out };
-        try {
-          const j = JSON.parse(data);
-          const chunk = j.choices?.[0]?.delta?.content;
-          if (chunk) { if (isStopCheck()) throw new StopError(); out += chunk; onDelta(out); }
-        } catch (e) { /* line parcial */ }
-      }
-    }
-    return { content: out };
-  }
 
   class StopError extends Error { constructor() { super('stop'); this.name = 'StopError'; } }
   class ProviderError extends Error { constructor(msg, status) { super(msg); this.name = 'ProviderError'; this.status = status; } }
@@ -674,7 +525,7 @@
       } else if (e instanceof ProviderError || e instanceof Error) {
         placeholder.querySelector('.prose').innerHTML =
           '<div class="border border-app-red/30 bg-app-red/10 rounded-lg p-3 text-sm text-app-red">' +
-          '<div><i class="ph ph-warning-circle mr-1.5"></i>Erro na API (' + e.status + '): ' + escapeHtml(e.message) + '</div>' +
+          '<div><i class="ph ph-warning-circle mr-1.5"></i>Falha no backend (' + (e.status || 0) + '): ' + escapeHtml(e.message) + '</div>' +
           '<div class="text-xs text-app-text mt-1.5">Verifique Base URL, modelo e chave em Configurações. Se for bloqueio de CORS, execute o app em um servidor local.</div>' +
           '<button data-act="regen" class="mt-2.5 text-xs text-app-textLight bg-white/5 hover:bg-white/10 border border-app-border rounded-md px-3 py-1.5 transition-colors"><i class="ph ph-arrow-counter-clockwise mr-1"></i>Tentar novamente</button></div>';
         toast('Falha ao chamar a API: ' + e.message, 'error');
@@ -1056,8 +907,7 @@
   function openSettings() {
     closeAllMenus();
     const p = state.provider;
-    const sel = p.mode;
-    (document.querySelector('input[name="providerMode"][value="backend"]') || document.querySelector('input[name="providerMode"][value="' + sel + '"]'))?.setAttribute('checked', 'checked');
+    $('#settingsModal input[name="providerMode"]').forEach((radio) => { radio.checked = radio.value === 'backend'; });
     $('#apiUrl').value = p.baseUrl || '';
     $('#apiModel').value = p.model || '';
     $('#apiKey').value = '';
