@@ -1,0 +1,13 @@
+project_id = "orbitai"
+
+[functions.bootstrap]
+verify_jwt = false
+
+[functions.providers]
+verify_jwt = false
+
+[functions.agents]
+verify_jwt = false
+
+[functions.chat]
+verify_jwt = false
