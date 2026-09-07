@@ -61,6 +61,7 @@
 
   let state = loadState() || seedState();
   if (state.provider?.mode === 'sim') state = seedState();
+  state.tokens = state.tokens || state['credits'] || { used: 0 };
   state.backend = state.backend || { workspaceId: null, agentId: null, providerId: null };
   state.provider = { mode: 'backend', baseUrl: state.provider?.baseUrl || '', model: state.provider?.model || '', apiKey: '', credentialId: state.provider?.credentialId || null };
   state.activeId = state.activeId || state.conversations[0]?.id || null;
