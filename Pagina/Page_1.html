@@ -1,0 +1,537 @@
+<!DOCTYPE html>
+<html lang="pt-BR" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>OrbitAI - Agent Platform</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <script src="https://unpkg.com/@phosphor-icons/web"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                        mono: ['JetBrains Mono', 'monospace'],
+                    },
+                    colors: {
+                        app: {
+                            bg: '#090a0f',
+                            panel: '#12141c',
+                            border: 'rgba(255, 255, 255, 0.06)',
+                            accent: '#c0ff2d',
+                            text: '#8a94a6',
+                            textLight: '#e2e8f0',
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        /* Custom scrollbar for dark theme */
+        ::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: transparent;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 10px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: rgba(255, 255, 255, 0.2);
+        }
+        
+        .glass-panel {
+            background: rgba(18, 20, 28, 0.6);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid var(--tw-colors-app-border);
+        }
+
+        .fade-out {
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.8s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+        
+        .slide-up {
+            animation: slideUp 0.6s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+            opacity: 0;
+            transform: translateY(20px);
+        }
+
+        @keyframes slideUp {
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .delay-100 { animation-delay: 100ms; }
+        .delay-200 { animation-delay: 200ms; }
+        .delay-300 { animation-delay: 300ms; }
+    </style>
+</head>
+<body class="bg-app-bg text-app-text font-sans h-screen w-screen overflow-hidden flex selection:bg-app-accent selection:text-black">
+
+    <!-- Preloader -->
+    <div id="preloader" class="fixed inset-0 z-50 bg-[#06070a] flex flex-col items-center justify-center">
+        <div class="relative w-20 h-20 mb-8">
+            <svg class="w-full h-full text-app-accent animate-[spin_3s_linear_infinite]" viewBox="0 0 100 100" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M50 10 C 72 10, 90 28, 90 50 C 90 72, 72 90, 50 90 C 28 90, 10 72, 10 50" stroke-dasharray="120 40" stroke-linecap="round"/>
+                <path d="M50 20 C 66.5 20, 80 33.5, 80 50 C 80 66.5, 66.5 80, 50 80 C 33.5 80, 20 66.5, 20 50" stroke-dasharray="80 60" stroke-linecap="round" class="animate-[spin_4s_linear_infinite_reverse] origin-center"/>
+            </svg>
+            <div class="absolute inset-0 flex items-center justify-center text-app-accent">
+                <i class="ph-fill ph-atom text-2xl"></i>
+            </div>
+        </div>
+        <h2 class="text-app-textLight text-lg font-medium mb-2 tracking-wide">Preparando seu espaço</h2>
+        <p class="text-app-text text-sm flex items-center gap-2">
+            <span class="w-1 h-1 rounded-full bg-app-text animate-pulse"></span>
+            Carregando seus dados e agentes...
+            <span class="w-1 h-1 rounded-full bg-app-text animate-pulse delay-100"></span>
+        </p>
+        <div class="w-48 h-1 bg-white/5 rounded-full mt-6 overflow-hidden">
+            <div class="h-full bg-app-accent w-0 rounded-full" id="loading-bar"></div>
+        </div>
+    </div>
+
+    <!-- Left Sidebar -->
+    <aside class="w-[260px] h-full flex flex-col border-r border-app-border bg-app-bg/50 backdrop-blur-xl z-10 flex-shrink-0">
+        <div class="p-4 flex items-center gap-3">
+            <div class="w-8 h-8 rounded-lg border border-app-accent/30 bg-app-accent/10 flex items-center justify-center text-app-accent">
+                <i class="ph-fill ph-atom text-xl"></i>
+            </div>
+            <span class="text-app-textLight font-semibold text-lg tracking-wide">OrbitAI</span>
+        </div>
+
+        <div class="px-4 py-2">
+            <button class="w-full bg-app-accent hover:bg-[#a9e625] text-[#090a0f] font-medium text-sm py-2.5 px-4 rounded-lg flex items-center justify-between transition-all duration-200 shadow-[0_0_15px_rgba(192,255,45,0.15)] hover:shadow-[0_0_20px_rgba(192,255,45,0.25)]">
+                <span class="flex items-center gap-2"><i class="ph ph-plus text-base"></i> Nova conversa</span>
+                <span class="font-mono text-[10px] opacity-60">⌘ K</span>
+            </button>
+        </div>
+
+        <div class="px-4 py-3">
+            <div class="text-xs font-medium text-app-text mb-2 uppercase tracking-wider">Workspace</div>
+            <button class="w-full flex items-center justify-between bg-white/5 hover:bg-white/10 border border-app-border rounded-md px-3 py-2 text-sm text-app-textLight transition-colors">
+                <span class="flex items-center gap-2"><i class="ph ph-users"></i> Eco Team</span>
+                <i class="ph ph-caret-down text-app-text"></i>
+            </button>
+        </div>
+
+        <div class="px-4 py-3 flex-1 overflow-y-auto">
+            <div class="flex items-center justify-between text-xs font-medium text-app-text mb-3 uppercase tracking-wider">
+                <span>Recentes</span>
+                <i class="ph ph-magnifying-glass hover:text-app-textLight cursor-pointer transition-colors"></i>
+            </div>
+            <div class="space-y-1">
+                <a href="#" class="flex items-center justify-between px-2 py-2 rounded-md bg-white/10 text-app-textLight text-sm group" rel="nofollow">
+                    <span class="flex items-center gap-2 truncate"><i class="ph ph-chat-teardrop-text"></i> Estratégia de lançamento</span>
+                    <div class="flex items-center gap-2 flex-shrink-0">
+                        <span class="text-[10px] text-app-text">17:28</span>
+                        <div class="w-1.5 h-1.5 rounded-full bg-app-accent"></div>
+                    </div>
+                </a>
+                <a href="#" class="flex items-center justify-between px-2 py-2 rounded-md hover:bg-white/5 text-sm text-app-text transition-colors" rel="nofollow">
+                    <span class="flex items-center gap-2 truncate"><i class="ph ph-chat-teardrop-text"></i> Análise de dados Q1</span>
+                    <span class="text-[10px]">16:42</span>
+                </a>
+                <a href="#" class="flex items-center justify-between px-2 py-2 rounded-md hover:bg-white/5 text-sm text-app-text transition-colors" rel="nofollow">
+                    <span class="flex items-center gap-2 truncate"><i class="ph ph-chat-teardrop-text"></i> Plano de marketing SaaS</span>
+                    <span class="text-[10px]">Ontem</span>
+                </a>
+                <a href="#" class="flex items-center justify-between px-2 py-2 rounded-md hover:bg-white/5 text-sm text-app-text transition-colors" rel="nofollow">
+                    <span class="flex items-center gap-2 truncate"><i class="ph ph-chat-teardrop-text"></i> Refatoração de código</span>
+                    <span class="text-[10px]">Ontem</span>
+                </a>
+                <a href="#" class="flex items-center justify-between px-2 py-2 rounded-md hover:bg-white/5 text-sm text-app-text transition-colors" rel="nofollow">
+                    <span class="flex items-center gap-2 truncate"><i class="ph ph-chat-teardrop-text"></i> Relatório financeiro</span>
+                    <span class="text-[10px]">2 dias</span>
+                </a>
+            </div>
+        </div>
+
+        <div class="p-4 border-t border-app-border space-y-1">
+            <a href="#" class="flex items-center gap-3 px-2 py-2 rounded-md hover:bg-white/5 text-sm transition-colors text-app-text hover:text-app-textLight" rel="nofollow">
+                <i class="ph ph-robot"></i> Agentes
+            </a>
+            <a href="#" class="flex items-center gap-3 px-2 py-2 rounded-md hover:bg-white/5 text-sm transition-colors text-app-text hover:text-app-textLight" rel="nofollow">
+                <i class="ph ph-coins"></i> Créditos e tokens
+            </a>
+            <a href="#" class="flex items-center gap-3 px-2 py-2 rounded-md hover:bg-white/5 text-sm transition-colors text-app-text hover:text-app-textLight" rel="nofollow">
+                <i class="ph ph-gear"></i> Configurações
+            </a>
+        </div>
+
+        <div class="p-4 border-t border-app-border">
+            <button class="w-full flex items-center justify-between hover:bg-white/5 rounded-md p-2 transition-colors -ml-2">
+                <div class="flex items-center gap-3">
+                    <div class="w-8 h-8 rounded-full bg-purple-500/20 text-purple-400 flex items-center justify-center font-medium text-xs border border-purple-500/30">
+                        LO
+                    </div>
+                    <div class="text-left">
+                        <div class="text-sm font-medium text-app-textLight leading-tight">Leonardo Oliveira</div>
+                        <div class="text-xs text-app-text">leo@eco.team</div>
+                    </div>
+                </div>
+                <i class="ph ph-caret-down text-app-text"></i>
+            </button>
+        </div>
+    </aside>
+
+    <!-- Main Chat Area -->
+    <main class="flex-1 flex flex-col relative bg-app-bg bg-[radial-gradient(ellipse_at_top_right,_var(--tw-gradient-stops))] from-white/[0.02] via-transparent to-transparent">
+        
+        <!-- Header -->
+        <header class="h-14 flex items-center justify-between px-6 border-b border-app-border flex-shrink-0 backdrop-blur-md sticky top-0 z-20">
+            <div class="flex items-center gap-3">
+                <div class="w-6 h-6 rounded flex items-center justify-center text-app-textLight">
+                    <i class="ph-fill ph-robot text-xl"></i>
+                </div>
+                <div>
+                    <div class="flex items-center gap-2">
+                        <span class="text-sm font-medium text-app-textLight">Devin</span>
+                        <div class="flex items-center gap-1.5 text-xs text-app-text bg-white/5 px-2 py-0.5 rounded-full border border-white/10">
+                            <span class="w-1.5 h-1.5 rounded-full bg-green-500"></span> Online
+                        </div>
+                    </div>
+                    <div class="text-xs text-app-text">Engenheiro de Software IA</div>
+                </div>
+            </div>
+            
+            <div class="flex items-center gap-3">
+                <button class="flex items-center gap-2 text-xs text-app-text hover:text-app-textLight bg-app-panel border border-app-border px-3 py-1.5 rounded-md transition-colors">
+                    <i class="ph ph-sparkle"></i> Claude 3.5 Sonnet <i class="ph ph-caret-down"></i>
+                </button>
+                <div class="w-px h-4 bg-app-border"></div>
+                <button class="text-app-text hover:text-app-textLight transition-colors"><i class="ph ph-export"></i></button>
+                <button class="text-app-text hover:text-app-textLight transition-colors"><i class="ph ph-share-network"></i></button>
+                <button class="text-app-text hover:text-app-textLight transition-colors"><i class="ph ph-dots-three-vertical"></i></button>
+            </div>
+        </header>
+
+        <!-- Chat Content -->
+        <div class="flex-1 overflow-y-auto p-6 flex flex-col gap-8 pb-32">
+            
+            <!-- User Message -->
+            <div class="flex flex-col items-end gap-1 slide-up">
+                <div class="text-xs text-app-text mr-1">17:28 <span class="bg-white/10 w-5 h-5 inline-flex items-center justify-center rounded-full ml-2 text-[10px] text-white">LO</span></div>
+                <div class="bg-app-panel border border-app-border text-app-textLight px-4 py-3 rounded-2xl rounded-tr-sm max-w-2xl text-sm leading-relaxed shadow-lg">
+                    Quais são as melhores práticas para estruturar um projeto Next.js em times grandes?
+                </div>
+            </div>
+
+            <!-- Agent Message -->
+            <div class="flex gap-4 max-w-4xl slide-up delay-100">
+                <div class="w-8 h-8 rounded-lg bg-white/5 border border-white/10 flex items-center justify-center text-app-textLight flex-shrink-0 mt-1">
+                    <i class="ph-fill ph-robot text-lg"></i>
+                </div>
+                <div class="flex-1 space-y-4">
+                    <div class="flex items-center gap-2 text-xs text-app-text">
+                        <span class="font-medium text-app-textLight">Devin</span>
+                        <span>17:28</span>
+                    </div>
+                    
+                    <div class="text-sm text-app-textLight leading-relaxed space-y-4">
+                        <p class="font-medium">Boas práticas para estruturar projetos Next.js em times grandes</p>
+                        <p class="text-app-text">Em projetos Next.js de grande escala, uma boa arquitetura melhora a manutenibilidade, colaboração e escalabilidade. Abaixo estão práticas recomendadas que funcionam bem na maioria dos casos.</p>
+                        
+                        <ol class="list-decimal pl-4 space-y-2">
+                            <li><span class="text-app-textLight font-medium">Estruture por domínio (Feature-Based)</span><br><span class="text-app-text">Organize por funcionalidades de negócio, não por tipo de arquivo.</span></li>
+                            <li><span class="text-app-textLight font-medium">Separe responsabilidades</span><br><span class="text-app-text">Mantenha UI, regras de negócio, dados e utilitários bem isolados.</span></li>
+                            <li><span class="text-app-textLight font-medium">Padronize convenções</span><br><span class="text-app-text">Use ESLint, Prettier, TypeScript e commits convencionais.</span></li>
+                            <li><span class="text-app-textLight font-medium">Testes automatizados</span><br><span class="text-app-text">Unitários, integração e E2E garantem qualidade e segurança.</span></li>
+                        </ol>
+                    </div>
+
+                    <!-- Code Block -->
+                    <div class="rounded-xl border border-app-border overflow-hidden bg-[#050608]">
+                        <div class="flex items-center justify-between px-4 py-2 bg-white/[0.02] border-b border-app-border text-xs text-app-text">
+                            <span>Exemplo de estrutura (App Router)</span>
+                            <button class="flex items-center gap-1.5 hover:text-app-textLight transition-colors"><i class="ph ph-copy"></i> Copiar</button>
+                        </div>
+                        <div class="p-4 overflow-x-auto">
+                            <pre class="font-mono text-xs leading-relaxed"><code class="text-gray-300"><span class="text-purple-400">src/</span>
+  <span class="text-blue-400">app/</span>
+    <span class="text-blue-300">(marketing)/</span>
+      page.tsx
+    <span class="text-blue-300">(dashboard)/</span>
+      layout.tsx
+      page.tsx
+  <span class="text-yellow-400">components/</span>
+  <span class="text-green-400">features/</span>
+    <span class="text-green-300">users/</span>
+      <span class="text-gray-400">components/</span>
+      <span class="text-gray-400">hooks/</span>
+      <span class="text-gray-400">services/</span>
+    <span class="text-green-300">billing/</span>
+  <span class="text-red-400">lib/</span>
+  <span class="text-orange-400">styles/</span></code></pre>
+                        </div>
+                    </div>
+
+                    <!-- Thought Process -->
+                    <div class="glass-panel rounded-xl overflow-hidden group cursor-pointer">
+                        <div class="px-4 py-3 flex items-center justify-between">
+                            <div class="flex items-center gap-2 text-xs text-app-text group-hover:text-app-textLight transition-colors">
+                                <i class="ph ph-brain text-app-accent"></i>
+                                <span class="font-medium text-app-textLight">Pensamento resumido</span>
+                            </div>
+                            <i class="ph ph-caret-down text-app-text transition-transform group-hover:text-app-textLight"></i>
+                        </div>
+                        <div class="px-4 pb-3 pt-0 text-xs text-app-text border-t border-white/5 mx-4 mt-1 hidden group-hover:block">
+                            Devin analisou documentação oficial, guias da comunidade e repositórios de referência.
+                        </div>
+                    </div>
+
+                    <div class="text-xs text-app-text pt-2">
+                        Fontes principais: <a href="#" class="text-blue-400 hover:underline" rel="nofollow">nextjs.org/docs</a>, <a href="#" class="text-blue-400 hover:underline" rel="nofollow">vercel.com</a>, comunidade Next.js, repositórios públicos.
+                    </div>
+
+                    <!-- Actions -->
+                    <div class="flex items-center gap-2 pt-2">
+                        <button class="flex items-center gap-2 px-3 py-1.5 rounded-md border border-app-border bg-app-panel text-xs text-app-text hover:bg-white/10 hover:text-app-textLight transition-all"><i class="ph ph-copy"></i> Copiar</button>
+                        <button class="flex items-center gap-2 px-3 py-1.5 rounded-md border border-app-border bg-app-panel text-xs text-app-text hover:bg-white/10 hover:text-app-textLight transition-all"><i class="ph ph-thumbs-up"></i> Avaliar</button>
+                        <button class="flex items-center gap-2 px-2 py-1.5 rounded-md border border-app-border bg-app-panel text-xs text-app-text hover:bg-white/10 hover:text-app-textLight transition-all"><i class="ph ph-thumbs-down"></i></button>
+                        <div class="flex ml-auto gap-2">
+                            <button class="flex items-center gap-2 px-3 py-1.5 rounded-md border border-app-border bg-app-panel text-xs text-app-text hover:bg-white/10 hover:text-app-textLight transition-all"><i class="ph ph-arrows-clockwise"></i> Regenerar <i class="ph ph-caret-down ml-1"></i></button>
+                            <button class="flex items-center gap-2 px-3 py-1.5 rounded-md border border-app-border bg-app-panel text-xs text-app-text hover:bg-white/10 hover:text-app-textLight transition-all"><i class="ph ph-arrow-right"></i> Continuar</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+        </div>
+
+        <!-- Input Area -->
+        <div class="absolute bottom-0 left-0 right-0 p-6 bg-gradient-to-t from-[#090a0f] via-[#090a0f] to-transparent pt-12 z-20">
+            <div class="max-w-4xl mx-auto relative group">
+                <div class="absolute -inset-0.5 bg-gradient-to-r from-app-border to-white/10 rounded-2xl blur opacity-30 group-focus-within:opacity-60 transition duration-500"></div>
+                <div class="relative bg-app-panel border border-app-border rounded-2xl flex flex-col shadow-2xl">
+                    <textarea placeholder="Pergunte qualquer coisa..." class="w-full bg-transparent text-app-textLight placeholder-app-text text-sm p-4 h-14 max-h-32 resize-none outline-none focus:ring-0 rounded-t-2xl"></textarea>
+                    
+                    <div class="flex items-center justify-between p-2 pl-3 border-t border-white/5">
+                        <div class="flex items-center gap-2">
+                            <button class="flex items-center gap-1.5 text-xs text-app-text hover:text-app-textLight bg-white/5 hover:bg-white/10 px-3 py-1.5 rounded-lg transition-colors border border-transparent hover:border-white/10">
+                                <i class="ph ph-plus text-sm"></i> Anexar
+                            </button>
+                            <button class="w-8 h-8 flex items-center justify-center text-app-text hover:text-app-textLight bg-white/5 hover:bg-white/10 rounded-lg transition-colors border border-transparent hover:border-white/10">
+                                <i class="ph ph-microphone"></i>
+                            </button>
+                        </div>
+                        
+                        <div class="flex items-center gap-3">
+                            <div class="flex items-center gap-2 text-xs text-app-text border-r border-app-border pr-3 hidden sm:flex">
+                                <span>Tokens estimados: ~1.240</span>
+                            </div>
+                            <button class="flex items-center gap-1.5 text-xs text-app-text hover:text-app-textLight bg-white/5 hover:bg-white/10 px-3 py-1.5 rounded-lg transition-colors border border-transparent hover:border-white/10">
+                                <i class="ph-fill ph-robot text-sm"></i> Devin <i class="ph ph-caret-down"></i>
+                            </button>
+                            <button class="w-8 h-8 rounded-lg bg-app-accent text-black flex items-center justify-center hover:bg-[#a9e625] transition-colors shadow-[0_0_10px_rgba(192,255,45,0.2)]">
+                                <i class="ph ph-arrow-up font-bold"></i>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                <div class="text-center mt-3 text-[10px] text-app-text flex items-center justify-center gap-1">
+                    IA pode cometer erros. Considere verificar informações importantes. <i class="ph ph-info cursor-help hover:text-app-textLight"></i>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- Right Sidebar & Popover -->
+    <aside class="w-[320px] h-full flex flex-col border-l border-app-border bg-app-panel/50 backdrop-blur-xl z-10 flex-shrink-0 relative">
+        <div class="p-5 flex-1 overflow-y-auto space-y-6">
+            
+            <!-- Usage Widget -->
+            <div class="space-y-4 slide-up delay-200">
+                <div class="flex items-center justify-between">
+                    <h3 class="text-sm font-medium text-app-textLight">Uso da conta</h3>
+                    <button class="text-xs text-app-text hover:text-app-textLight border border-app-border bg-white/5 px-2 py-1 rounded-md transition-colors">Ver detalhes</button>
+                </div>
+                
+                <div class="text-xs text-app-text">Ciclo atual: 1-31 de mai</div>
+                
+                <div>
+                    <div class="flex items-end gap-2 mb-2">
+                        <span class="text-2xl font-light text-app-textLight">12.540</span>
+                        <span class="text-sm text-app-text pb-1">créditos</span>
+                    </div>
+                    <div class="flex items-center justify-between text-xs text-app-text mb-2">
+                        <span>de 20.000</span>
+                        <span>62%</span>
+                    </div>
+                    <div class="w-full h-1.5 bg-white/10 rounded-full overflow-hidden">
+                        <div class="h-full bg-app-accent rounded-full shadow-[0_0_8px_rgba(192,255,45,0.4)]" style="width: 62%;"></div>
+                    </div>
+                    <div class="text-[10px] text-app-text mt-2 text-right">Renova em 12 dias</div>
+                </div>
+                
+                <!-- Consumption Breakdown -->
+                <div class="bg-white/5 border border-app-border rounded-xl p-4 space-y-3">
+                    <div class="text-xs font-medium text-app-text mb-1">Consumo por categoria</div>
+                    
+                    <div class="flex items-center justify-between text-xs">
+                        <div class="flex items-center gap-2 text-app-textLight">
+                            <span class="w-2 h-2 rounded-full bg-app-accent shadow-[0_0_5px_rgba(192,255,45,0.5)]"></span> Modelos
+                        </div>
+                        <span class="text-app-text font-mono">8.640</span>
+                    </div>
+                    
+                    <div class="flex items-center justify-between text-xs">
+                        <div class="flex items-center gap-2 text-app-textLight">
+                            <span class="w-2 h-2 rounded-full bg-blue-500 shadow-[0_0_5px_rgba(59,130,246,0.5)]"></span> Ferramentas
+                        </div>
+                        <span class="text-app-text font-mono">2.100</span>
+                    </div>
+                    
+                    <div class="flex items-center justify-between text-xs">
+                        <div class="flex items-center gap-2 text-app-textLight">
+                            <span class="w-2 h-2 rounded-full bg-purple-500 shadow-[0_0_5px_rgba(168,85,247,0.5)]"></span> Armazenamento
+                        </div>
+                        <span class="text-app-text font-mono">1.800</span>
+                    </div>
+                    
+                    <div class="pt-2 border-t border-white/10 flex items-center justify-between text-xs font-medium text-app-textLight mt-1">
+                        <span>Total</span>
+                        <span class="font-mono">12.540</span>
+                    </div>
+                </div>
+
+                <!-- Models list -->
+                <div class="space-y-3 pt-2">
+                    <div class="flex items-center gap-1.5 text-xs text-app-text">
+                        Modelos e custos <i class="ph ph-info cursor-help hover:text-app-textLight"></i>
+                    </div>
+                    
+                    <div class="space-y-2">
+                        <div class="flex items-center justify-between text-xs">
+                            <div class="flex items-center gap-2 text-app-textLight">
+                                <i class="ph-fill ph-sparkle text-app-accent"></i> Claude 3.5 Sonnet
+                            </div>
+                            <span class="text-app-text font-mono">1.250 / 1M tok</span>
+                        </div>
+                        <div class="flex items-center justify-between text-xs">
+                            <div class="flex items-center gap-2 text-app-textLight">
+                                <i class="ph ph-openai-logo text-gray-400"></i> GPT-4o
+                            </div>
+                            <span class="text-app-text font-mono">850 / 1M tok</span>
+                        </div>
+                        <div class="flex items-center justify-between text-xs">
+                            <div class="flex items-center gap-2 text-app-textLight">
+                                <i class="ph-fill ph-google-logo text-blue-400"></i> Gemini 1.5 Pro
+                            </div>
+                            <span class="text-app-text font-mono">600 / 1M tok</span>
+                        </div>
+                        <div class="flex items-center justify-between text-xs">
+                            <div class="flex items-center gap-2 text-app-textLight">
+                                <i class="ph-fill ph-robot text-purple-400"></i> Devin SWE-1.7
+                            </div>
+                            <span class="text-app-text font-mono">1.800 / 1M tok</span>
+                        </div>
+                    </div>
+                    
+                    <button class="w-full text-xs text-app-textLight hover:bg-white/10 bg-white/5 border border-app-border rounded-lg py-2 mt-4 transition-colors">
+                        Gerenciar modelos
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Floating Account Popover (Positioned to match reference) -->
+        <div class="absolute bottom-6 -left-64 w-[280px] bg-app-panel border border-app-border rounded-xl shadow-2xl p-2 z-30 slide-up delay-300">
+            <div class="px-3 py-2 text-xs font-medium text-app-text mb-1">Configurações da conta</div>
+            
+            <div class="flex items-center gap-3 px-3 py-2 bg-white/5 rounded-lg mb-2">
+                <div class="w-10 h-10 rounded-full bg-purple-500/20 text-purple-400 flex items-center justify-center font-medium text-sm border border-purple-500/30 relative">
+                    LO
+                    <span class="absolute bottom-0 right-0 w-2.5 h-2.5 bg-app-accent border-2 border-app-panel rounded-full"></span>
+                </div>
+                <div class="text-left flex-1 min-w-0">
+                    <div class="text-sm font-medium text-app-textLight truncate">Leonardo Oliveira</div>
+                    <div class="text-xs text-app-text truncate">leo@eco.team</div>
+                </div>
+            </div>
+            
+            <div class="space-y-0.5">
+                <button class="w-full flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-white/5 text-sm text-app-textLight transition-colors">
+                    <i class="ph ph-user text-app-text"></i> Perfil
+                </button>
+                <button class="w-full flex items-center justify-between px-3 py-2 rounded-lg hover:bg-white/5 text-sm text-app-textLight transition-colors">
+                    <div class="flex items-center gap-3"><i class="ph ph-faders text-app-text"></i> Preferências</div>
+                    <i class="ph ph-caret-right text-app-text text-xs"></i>
+                </button>
+                <button class="w-full flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-white/5 text-sm text-app-textLight transition-colors">
+                    <i class="ph ph-bell text-app-text"></i> Notificações
+                </button>
+                <button class="w-full flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-white/5 text-sm text-app-textLight transition-colors">
+                    <i class="ph ph-shield-check text-app-text"></i> Segurança
+                </button>
+                <button class="w-full flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-white/5 text-sm text-app-textLight transition-colors">
+                    <i class="ph ph-credit-card text-app-text"></i> Cobrança e planos
+                </button>
+            </div>
+            
+            <div class="h-px bg-app-border my-2 mx-2"></div>
+            
+            <button class="w-full flex items-center justify-between px-3 py-2 rounded-lg hover:bg-white/5 text-sm text-app-textLight transition-colors">
+                <span class="text-app-text">Tema</span>
+                <div class="flex items-center gap-1.5">
+                    <i class="ph ph-moon text-app-text"></i> Escuro <i class="ph ph-caret-right text-app-text text-xs ml-1"></i>
+                </div>
+            </button>
+            
+            <div class="h-px bg-app-border my-2 mx-2"></div>
+            
+            <button class="w-full flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-white/5 text-sm text-red-400 transition-colors">
+                Sair da conta
+            </button>
+        </div>
+    </aside>
+
+    <script>
+        // Preloader Logic
+        document.addEventListener('DOMContentLoaded', () => {
+            const preloader = document.getElementById('preloader');
+            const bar = document.getElementById('loading-bar');
+            
+            // Simulate loading progress
+            setTimeout(() => { bar.style.width = '30%'; }, 200);
+            setTimeout(() => { bar.style.width = '70%'; }, 800);
+            setTimeout(() => { bar.style.width = '100%'; }, 1200);
+            
+            // Hide preloader
+            setTimeout(() => {
+                preloader.classList.add('fade-out');
+                setTimeout(() => {
+                    preloader.style.display = 'none';
+                }, 800);
+            }, 1500);
+        });
+
+        // Simple thought collapse toggle
+        document.querySelectorAll('.glass-panel').forEach(panel => {
+            panel.addEventListener('click', function() {
+                const content = this.querySelector('.hidden, .block:not(.px-4.py-3)');
+                if(content) {
+                    content.classList.toggle('hidden');
+                    const icon = this.querySelector('.ph-caret-down');
+                    if(icon) {
+                        icon.style.transform = content.classList.contains('hidden') ? 'rotate(0deg)' : 'rotate(180deg)';
+                    }
+                }
+            });
+        });
+    </script>
+</body>
+</html>

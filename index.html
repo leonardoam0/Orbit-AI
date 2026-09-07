@@ -1,0 +1,427 @@
+<!DOCTYPE html>
+<html lang="pt-BR" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="OrbitAI — plataforma de agentes de IA">
+    <title>OrbitAI — Agent Platform</title>
+    <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ccircle cx='50' cy='50' r='34' fill='none' stroke='%23c0ff2d' stroke-width='7' stroke-dasharray='150 70' stroke-linecap='round'/%3E%3Ccircle cx='50' cy='50' r='10' fill='%23c0ff2d'/%3E%3C/svg%3E">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <script src="https://unpkg.com/@phosphor-icons/web"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                        mono: ['JetBrains Mono', 'monospace'],
+                    },
+                    colors: {
+                        app: {
+                            bg: '#090a0f',
+                            panel: '#12141c',
+                            border: 'rgba(255, 255, 255, 0.06)',
+                            accent: '#c0ff2d',
+                            text: '#8a94a6',
+                            textLight: '#e2e8f0',
+                            red: '#f8717a',
+                            warning: '#f5b84a',
+                        }
+                    }
+                }
+            }
+        };
+    </script>
+    <link rel="stylesheet" href="css/app.css">
+</head>
+<body class="bg-app-bg text-app-text font-sans h-screen w-screen overflow-hidden flex selection:bg-app-accent selection:text-black">
+
+    <!-- Preloader -->
+    <div id="preloader" class="fixed inset-0 z-50 bg-[#06070a] flex flex-col items-center justify-center">
+        <div class="relative w-20 h-20 mb-8">
+            <svg class="w-full h-full text-app-accent animate-[spin_3s_linear_infinite]" viewBox="0 0 100 100" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M50 10 C 72 10, 90 28, 90 50 C 90 72, 72 90, 50 90 C 28 90, 10 72, 10 50" stroke-dasharray="120 40" stroke-linecap="round"/>
+                <path d="M50 20 C 66.5 20, 80 33.5, 80 50 C 80 66.5, 66.5 80, 50 80 C 33.5 80, 20 66.5, 20 50" stroke-dasharray="80 60" stroke-linecap="round" class="animate-[spin_4s_linear_infinite_reverse] origin-center"/>
+            </svg>
+            <div class="absolute inset-0 flex items-center justify-center text-app-accent">
+                <i class="ph-fill ph-atom text-2xl"></i>
+            </div>
+        </div>
+        <h2 class="text-app-textLight text-lg font-medium mb-2 tracking-wide">Preparando seu espaço</h2>
+        <p class="text-app-text text-sm flex items-center gap-2">
+            <span class="w-1 h-1 rounded-full bg-app-text animate-pulse"></span>
+            Carregando seus dados e agentes...
+            <span class="w-1 h-1 rounded-full bg-app-text animate-pulse dot-delay"></span>
+        </p>
+        <div class="w-48 h-1 bg-white/5 rounded-full mt-6 overflow-hidden">
+            <div class="h-full bg-app-accent w-0 rounded-full transition-[width] duration-500 ease-out" id="loading-bar"></div>
+        </div>
+    </div>
+
+    <!-- Backdrop (mobile drawers) -->
+    <div id="backdrop" class="hidden fixed inset-0 z-30 bg-black/60 backdrop-blur-sm animate-fade-in" aria-hidden="true"></div>
+
+    <!-- Left Sidebar -->
+    <aside id="leftSidebar" class="w-[260px] h-full flex flex-col border-r border-app-border bg-app-bg/50 backdrop-blur-xl z-10 flex-shrink-0">
+        <div class="p-4 flex items-center gap-3">
+            <div class="w-8 h-8 rounded-lg border border-app-accent/30 bg-app-accent/10 flex items-center justify-center text-app-accent glow-accent">
+                <i class="ph-fill ph-atom text-xl"></i>
+            </div>
+            <span class="text-app-textLight font-semibold text-lg tracking-wide">OrbitAI</span>
+        </div>
+
+        <div class="px-4 py-2">
+            <button id="btnNewChat" class="glow-btn w-full bg-app-accent hover:bg-[#a9e625] active:scale-[0.98] text-[#090a0f] font-medium text-sm py-2.5 px-4 rounded-lg flex items-center justify-between transition-all duration-200">
+                <span class="flex items-center gap-2"><i class="ph ph-plus text-base"></i> Nova conversa</span>
+                <span class="font-mono text-[10px] opacity-60">⌘ K</span>
+            </button>
+        </div>
+
+        <div class="px-4 py-3">
+            <div class="text-xs font-medium text-app-text mb-2 uppercase tracking-wider">Workspace</div>
+            <div class="relative">
+                <button id="wsButton" class="w-full flex items-center justify-between bg-white/5 hover:bg-white/10 border border-app-border rounded-md px-3 py-2 text-sm text-app-textLight transition-colors" aria-haspopup="true" aria-expanded="false">
+                    <span class="flex items-center gap-2 truncate"><i class="ph ph-users"></i> <span id="wsLabel">Eco Team</span></span>
+                    <i class="ph ph-caret-down text-app-text transition-transform duration-200" id="wsCaret"></i>
+                </button>
+                <ul id="wsMenu" class="menu-panel absolute left-0 right-0 top-full mt-1 z-30 bg-app-panel border border-app-border rounded-lg shadow-2xl py-1 hidden">
+                    <li><button data-ws="Eco Team" class="menu-item w-full flex items-center gap-3 px-3 py-2 text-sm hover:bg-white/5 text-app-textLight transition-colors">Eco Team <i class="ph ph-check text-app-accent ml-auto hidden"></i></button></li>
+                    <li><button data-ws="Pesquisas Labs" class="menu-item w-full flex items-center gap-3 px-3 py-2 text-sm hover:bg-white/5 text-app-textLight transition-colors">Pesquisas Labs <i class="ph ph-check text-app-accent ml-auto hidden"></i></button></li>
+                    <li><button data-ws="Pessoal" class="menu-item w-full flex items-center gap-3 px-3 py-2 text-sm hover:bg-white/5 text-app-textLight transition-colors">Pessoal <i class="ph ph-check text-app-accent ml-auto hidden"></i></button></li>
+                </ul>
+            </div>
+        </div>
+
+        <div class="px-4 py-3 flex-1 overflow-y-auto">
+            <div class="flex items-center justify-between text-xs font-medium text-app-text mb-3 uppercase tracking-wider">
+                <span>Recentes</span>
+                <button id="searchToggle" class="hover:text-app-textLight transition-colors" aria-label="Buscar conversas"><i class="ph ph-magnifying-glass"></i></button>
+            </div>
+            <div id="searchWrap" class="mb-3 hidden animate-fade-in">
+                <input id="searchInput" type="search" placeholder="Buscar conversas…"
+                       class="w-full bg-white/5 border border-app-border rounded-md px-3 py-1.5 text-sm text-app-textLight placeholder-app-text outline-none focus:border-app-accent/40 transition-colors">
+            </div>
+            <div id="convList" class="space-y-1"></div>
+        </div>
+
+        <div class="p-4 border-t border-app-border space-y-1">
+            <button id="navAgents" class="w-full flex items-center gap-3 px-2 py-2 rounded-md hover:bg-white/5 text-sm transition-colors text-app-text hover:text-app-textLight">
+                <i class="ph ph-robot"></i> Agentes
+                <span class="ml-auto text-[10px] bg-white/5 border border-app-border rounded-full px-1.5 py-0.5">em breve</span>
+            </button>
+            <button id="navCredits" class="w-full flex items-center gap-3 px-2 py-2 rounded-md hover:bg-white/5 text-sm transition-colors text-app-text hover:text-app-textLight">
+                <i class="ph ph-coins"></i> Créditos e tokens
+            </button>
+            <button id="navSettings" class="w-full flex items-center gap-3 px-2 py-2 rounded-md hover:bg-white/5 text-sm transition-colors text-app-text hover:text-app-textLight">
+                <i class="ph ph-gear"></i> Configurações
+            </button>
+        </div>
+
+        <div class="p-4 border-t border-app-border relative">
+            <button id="accountBtn" class="w-full flex items-center justify-between hover:bg-white/5 rounded-md p-2 transition-colors -ml-2" aria-haspopup="true" aria-expanded="false">
+                <div class="flex items-center gap-3">
+                    <div class="w-8 h-8 rounded-full bg-purple-500/20 text-purple-400 flex items-center justify-center font-medium text-xs border border-purple-500/30 relative">
+                        LO
+                        <span class="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 bg-app-accent border-2 border-app-bg rounded-full"></span>
+                    </div>
+                    <div class="text-left">
+                        <div class="text-sm font-medium text-app-textLight leading-tight">Leonardo Oliveira</div>
+                        <div class="text-xs text-app-text">leo@eco.team</div>
+                    </div>
+                </div>
+                <i class="ph ph-caret-up text-app-text transition-transform duration-200" id="accountCaret"></i>
+            </button>
+
+            <!-- Account Popover -->
+            <div id="accountPopover" class="menu-panel absolute bottom-full left-0 right-0 mb-2 bg-app-panel border border-app-border rounded-xl shadow-2xl p-2 hidden" role="menu">
+                <div class="px-3 py-2 text-xs font-medium text-app-text mb-1">Configurações da conta</div>
+                <button data-acct="perfil" class="acct-item w-full flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-white/5 text-sm text-app-textLight transition-colors">
+                    <i class="ph ph-user text-app-text"></i> Perfil
+                </button>
+                <button data-acct="prefs" class="acct-item w-full flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-white/5 text-sm text-app-textLight transition-colors">
+                    <i class="ph ph-faders text-app-text"></i> Provedor e dados
+                </button>
+                <button data-acct="billing" class="acct-item w-full flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-white/5 text-sm text-app-textLight transition-colors">
+                    <i class="ph ph-credit-card text-app-text"></i> Cobrança e planos
+                </button>
+                <div class="h-px bg-app-border my-1 mx-2"></div>
+                <button data-acct="logout" class="w-full flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-white/5 text-sm text-app-red transition-colors">
+                    <i class="ph ph-sign-out text-app-red"></i> Sair da conta
+                </button>
+            </div>
+        </div>
+    </aside>
+
+    <!-- Main Chat Area -->
+    <main class="flex-1 flex flex-col relative min-w-0">
+        <!-- Header -->
+        <header class="h-14 flex items-center justify-between px-4 lg:px-6 border-b border-app-border flex-shrink-0 backdrop-blur-md sticky top-0 z-20">
+            <div class="flex items-center gap-3 min-w-0">
+                <button id="btnMenuLeft" class="lg:hidden w-8 h-8 flex items-center justify-center text-app-text hover:text-app-textLight bg-white/5 rounded-md transition-colors" aria-label="Abrir menu">
+                    <i class="ph ph-list text-lg"></i>
+                </button>
+                <div class="w-6 h-6 rounded flex items-center justify-center text-app-textLight flex-shrink-0">
+                    <i class="ph-fill ph-robot text-xl"></i>
+                </div>
+                <div class="min-w-0">
+                    <div class="flex items-center gap-2">
+                        <span class="text-sm font-medium text-app-textLight">Devin</span>
+                        <div class="flex items-center gap-1.5 text-xs text-app-text bg-white/5 px-2 py-0.5 rounded-full border border-white/10">
+                            <span class="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse-soft"></span> Online
+                        </div>
+                    </div>
+                    <div class="text-xs text-app-text">Engenheiro de Software IA</div>
+                </div>
+            </div>
+
+            <div class="flex items-center gap-2 lg:gap-3">
+                <div class="relative">
+                    <button id="modelBtn" class="flex items-center gap-2 text-xs text-app-text hover:text-app-textLight bg-app-panel border border-app-border px-3 py-1.5 rounded-md transition-colors" aria-haspopup="true" aria-expanded="false">
+                        <i class="ph ph-sparkle text-app-accent"></i> <span id="modelLabel">Claude 3.5 Sonnet</span> <i class="ph ph-caret-down"></i>
+                    </button>
+                    <ul id="modelMenu" class="menu-panel absolute right-0 top-full mt-1 w-56 bg-app-panel border border-app-border rounded-lg shadow-2xl py-1 hidden" role="menu">
+                        <li class="px-3 py-1.5 text-[10px] uppercase tracking-wider text-app-text">Modelos</li>
+                        <li id="modelItems"></li>
+                        <li class="border-t border-app-border mt-1"><button data-modelact="config" class="menu-item w-full flex items-center gap-2 px-3 py-2 text-xs text-app-text hover:text-app-textLight hover:bg-white/5 transition-colors"><i class="ph ph-plugs"></i> Configurar provedor… <span class="ml-auto text-[9px] bg-white/10 rounded px-1.5 py-0.5">API</span></button></li>
+                    </ul>
+                </div>
+
+                <div class="hidden lg:block w-px h-4 bg-app-border"></div>
+
+                <button id="btnExport" class="hidden lg:flex w-8 h-8 items-center justify-center text-app-text hover:text-app-textLight bg-white/5 hover:bg-white/10 rounded-md transition-colors" title="Exportar conversa (.md)" aria-label="Exportar conversa"><i class="ph ph-export"></i></button>
+                <button id="btnShare" class="hidden lg:flex w-8 h-8 items-center justify-center text-app-text hover:text-app-textLight bg-white/5 hover:bg-white/10 rounded-md transition-colors" title="Copiar conversa" aria-label="Copiar conversa"><i class="ph ph-share-network"></i></button>
+                <div class="relative hidden lg:block">
+                    <button id="btnMore" class="w-8 h-8 flex items-center justify-center text-app-text hover:text-app-textLight bg-white/5 hover:bg-white/10 rounded-md transition-colors" aria-label="Mais ações" aria-haspopup="true"><i class="ph ph-dots-three-vertical"></i></button>
+                    <ul id="moreMenu" class="menu-panel absolute right-0 top-full mt-1 w-52 bg-app-panel border border-app-border rounded-lg shadow-2xl py-1 hidden z-30">
+                        <li><button data-more="copy" class="menu-item w-full flex items-center gap-2.5 px-3 py-2 text-xs hover:bg-white/5 text-app-textLight transition-colors"><i class="ph ph-copy text-app-text"></i> Copiar conversa</button></li>
+                        <li><button data-more="export" class="menu-item w-full flex items-center gap-2.5 px-3 py-2 text-xs hover:bg-white/5 text-app-textLight transition-colors"><i class="ph ph-export text-app-text"></i> Exportar .md</button></li>
+                        <li><button data-more="clear" class="menu-item w-full flex items-center gap-2.5 px-3 py-2 text-xs hover:bg-white/5 text-app-warning transition-colors"><i class="ph ph-broom text-app-text"></i> Limpar conversa</button></li>
+                    </ul>
+                </div>
+
+                <button id="btnPanelRight" class="w-8 h-8 flex items-center justify-center text-app-text hover:text-app-textLight bg-white/5 rounded-md transition-colors" title="Abrir/fechar painel de uso" aria-label="Abrir ou fechar painel de uso"><i class="ph ph-barcode-scan"></i></button>
+            </div>
+        </header>
+
+        <!-- Chat Content -->
+        <div id="chatScroll" class="flex-1 overflow-y-auto p-4 lg:p-6 flex flex-col gap-8 pb-40 lg:pb-44">
+
+            <!-- Empty state -->
+            <div id="emptyState" class="hidden flex-1 flex flex-col items-center justify-center text-center animate-fade-in">
+                <div class="w-14 h-14 rounded-2xl border border-app-accent/30 bg-app-accent/10 text-app-accent flex items-center justify-center mb-4 glow-accent">
+                    <i class="ph-fill ph-robot text-3xl"></i>
+                </div>
+                <h2 class="text-app-textLight text-lg font-medium">Como posso ajudar hoje?</h2>
+                <p class="text-sm text-app-text mt-1 mb-6 max-w-sm">Pergunte qualquer coisa ou parta de uma sugestão — o Devin responde com fontes e código.</p>
+                <div id="suggestChips" class="flex flex-wrap items-center justify-center gap-2 max-w-md"></div>
+            </div>
+
+            <!-- Messages (rendered by JS) -->
+            <div id="chat" class="w-full mx-auto"></div>
+        </div>
+
+        <!-- Botão "voltar ao final" (aparece quando o usuário sobe durante a geração) -->
+        <button id="btnToBottom" class="hidden absolute left-1/2 -translate-x-1/2 bottom-40 lg:bottom-44 z-30 flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-app-accent/40 bg-app-panel/90 backdrop-blur-sm text-xs text-app-accent shadow-lg hover:bg-app-panel active:scale-95 transition-colors">
+            <i class="ph ph-arrow-down"></i> Voltar ao final
+        </button>
+
+        <!-- Input Area -->
+        <div id="inputDock" class="absolute bottom-0 left-0 right-0 p-4 lg:p-6 bg-gradient-to-t from-app-bg via-app-bg to-transparent pt-12 z-20">
+            <div class="max-w-4xl mx-auto relative group">
+                <div id="inputGlow" class="absolute -inset-0.5 bg-gradient-to-r from-app-accent/25 via-white/10 to-app-accent/15 rounded-2xl blur opacity-30 group-focus-within:opacity-70 transition duration-500"></div>
+                <div class="relative bg-app-panel border border-app-border focus-within:border-app-accent/30 rounded-2xl flex flex-col shadow-2xl transition-colors duration-300">
+                    <textarea id="input" rows="1" placeholder="Pergunte qualquer coisa…"
+                        class="w-full bg-transparent text-app-textLight placeholder-app-text text-sm p-4 h-14 max-h-36 resize-none outline-none focus:ring-0 rounded-t-2xl leading-relaxed"></textarea>
+
+                    <div class="flex items-center justify-between p-2 pl-3 border-t border-white/5">
+                        <div class="flex items-center gap-2">
+                            <button id="btnAttach" class="flex items-center gap-1.5 text-xs text-app-text hover:text-app-textLight bg-white/5 hover:bg-white/10 px-3 py-1.5 rounded-lg transition-colors border border-transparent hover:border-white/10">
+                                <i class="ph ph-plus text-sm"></i> <span class="hidden sm:inline">Anexar</span>
+                            </button>
+                            <button id="btnMic" class="w-8 h-8 flex items-center justify-center text-app-text hover:text-app-textLight bg-white/5 hover:bg-white/10 rounded-lg transition-colors border border-transparent hover:border-white/10" aria-label="Ditar">
+                                <i class="ph ph-microphone"></i>
+                            </button>
+                            <button id="btnProvider" class="hidden sm:flex items-center gap-1.5 text-[11px] text-app-text hover:text-app-textLight bg-white/5 hover:bg-white/10 px-2.5 py-1.5 rounded-lg transition-colors border border-transparent hover:border-white/10" title="Provedor de IA">
+                                <span class="w-1.5 h-1.5 rounded-full bg-app-accent animate-pulse-soft"></span> <span id="providerLabel">Simulação local</span>
+                            </button>
+                        </div>
+
+                        <div class="flex items-center gap-2 sm:gap-3">
+                            <div class="hidden md:flex items-center gap-2 text-[11px] text-app-text border-r border-app-border pr-3">
+                                <i class="ph ph-pixel-corners"></i> <span id="tokenEstimate">~ 40 tokens</span>
+                            </div>
+                            <button id="btnStop" class="hidden w-8 h-8 rounded-lg border border-app-warning/40 bg-app-warning/10 text-app-warning flex items-center justify-center hover:bg-app-warning/20 transition-colors" title="Parar geração" aria-label="Parar geração">
+                                <i class="ph-fill ph-square text-sm"></i>
+                            </button>
+                            <button id="btnSend" class="glow-btn w-8 h-8 rounded-lg bg-app-accent text-black flex items-center justify-center hover:bg-[#a9e625] active:scale-95 transition-all" title="Enviar (Enter)" aria-label="Enviar mensagem">
+                                <i class="ph ph-arrow-up font-bold"></i>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                <div class="text-center mt-2.5 text-[10px] text-app-text flex items-center justify-center gap-1">
+                    IA pode cometer erros. Considere verificar informações importantes. <i class="ph ph-info cursor-help hover:text-app-textLight"></i>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- Right Sidebar -->
+    <aside id="rightSidebar" class="w-[300px] xl:w-[330px] h-full flex flex-col border-l border-app-border bg-app-panel/50 backdrop-blur-xl z-10 flex-shrink-0">
+        <div class="flex items-center justify-between px-4 lg:px-5 py-3 border-b border-app-border flex-shrink-0">
+            <h3 class="text-sm font-medium text-app-textLight">Uso da conta</h3>
+            <div class="flex items-center gap-1.5">
+                <button id="btnUsageDetails" class="text-xs text-app-text hover:text-app-textLight border border-app-border bg-white/5 px-2 py-1 rounded-md transition-colors">Detalhes</button>
+                <button id="rightClose" class="w-7 h-7 flex items-center justify-center text-app-text hover:text-app-textLight hover:bg-white/5 rounded-md transition-colors" title="Fechar painel" aria-label="Fechar painel"><i class="ph ph-x"></i></button>
+            </div>
+        </div>
+
+        <div class="p-5 flex-1 overflow-y-auto space-y-6">
+            <div class="text-xs text-app-text">Ciclo atual: <span id="cycleLabel">1–31 de mai</span></div>
+
+            <div>
+                <div class="flex items-end gap-2 mb-2">
+                    <span class="text-2xl font-light text-app-textLight" id="creditsNum">12.540</span>
+                    <span class="text-sm text-app-text pb-1">créditos</span>
+                    <span id="creditsLow" class="text-[10px] text-app-red bg-app-red/10 border border-app-red/30 rounded-full px-2 py-0.5 mb-1 hidden">baixo</span>
+                </div>
+                <div class="flex items-center justify-between text-xs text-app-text mb-2">
+                    <span>de 20.000</span>
+                    <span id="creditsPct">63%</span>
+                </div>
+                <div class="w-full h-1.5 bg-white/10 rounded-full overflow-hidden">
+                    <div class="credit-bar h-full bg-app-accent rounded-full shadow-[0_0_8px_rgba(192,255,45,0.4)]" style="width: 63%;"></div>
+                </div>
+                <div class="text-[10px] text-app-text mt-2 text-right" id="renewLabel">Renova em 12 dias</div>
+            </div>
+
+            <div class="bg-white/5 border border-app-border rounded-xl p-4 space-y-3">
+                <div class="text-xs font-medium text-app-text">Consumo por categoria</div>
+                <div id="usageBreakdown" class="space-y-3"></div>
+            </div>
+
+            <div class="space-y-3 pt-2">
+                <div class="flex items-center gap-1.5 text-xs text-app-text">
+                    Modelos e custos <i class="ph ph-info cursor-help hover:text-app-textLight" title="Valores estimados em R$/1M de tokens de entrada, apenas referência"></i>
+                </div>
+                <div id="modelList" class="space-y-2"></div>
+                <button id="btnManageModels" class="w-full text-xs text-app-textLight hover:bg-white/10 bg-white/5 border border-app-border rounded-lg py-2 mt-2 transition-colors active:scale-[0.99]">
+                    Gerenciar modelos
+                </button>
+            </div>
+        </div>
+    </aside>
+
+    <!-- Settings Modal -->
+    <div id="settingsModal" class="hidden fixed inset-0 z-50 items-center justify-center p-4" role="dialog" aria-modal="true" aria-labelledby="settingsTitle">
+        <div class="modal-backdrop absolute inset-0 bg-black/70 backdrop-blur-sm"></div>
+        <div class="relative w-full max-w-md bg-app-panel border border-app-border rounded-2xl shadow-2xl modal-panel overflow-hidden">
+            <div class="flex items-center justify-between px-5 py-4 border-b border-app-border">
+                <div class="flex items-center gap-2.5">
+                    <i class="ph-fill ph-gear text-app-accent"></i>
+                    <h2 id="settingsTitle" class="text-sm font-medium text-app-textLight">Configurações</h2>
+                </div>
+                <button id="settingsClose" class="w-7 h-7 flex items-center justify-center text-app-text hover:text-app-textLight rounded-md hover:bg-white/5 transition-colors" aria-label="Fechar"><i class="ph ph-x"></i></button>
+            </div>
+
+            <div class="p-5 space-y-5 max-h-[70vh] overflow-y-auto">
+                <section>
+                    <div class="text-xs font-medium text-app-text uppercase tracking-wider mb-3">Provedor de IA</div>
+                    <div class="space-y-2.5">
+                        <label class="flex items-start gap-3 p-3 rounded-xl border border-app-border bg-white/[0.02] cursor-pointer hover:border-white/20 transition-colors" data-mode="sim">
+                            <input type="radio" name="providerMode" value="sim" class="mt-1 accent-[#c0ff2d]">
+                            <span>
+                                <span class="block text-sm text-app-textLight font-medium">Simulação local</span>
+                                <span class="block text-xs text-app-text mt-0.5">Agentes demo com respostas embutidas, sem custo de API.</span>
+                            </span>
+                            <i class="ph-fill ph-check-circle text-app-accent ml-auto mt-0.5 mode-check hidden"></i>
+                        </label>
+                        <label class="flex items-start gap-3 p-3 rounded-xl border border-app-border bg-white/[0.02] cursor-pointer hover:border-white/20 transition-colors" data-mode="api">
+                            <input type="radio" name="providerMode" value="api" class="mt-1 accent-[#c0ff2d]">
+                            <span>
+                                <span class="block text-sm text-app-textLight font-medium">API compatível (OpenAI)</span>
+                                <span class="block text-xs text-app-text mt-0.5">OpenAI, OpenRouter, Ollama local ou qualquer endpoint /chat/completions.</span>
+                            </span>
+                            <i class="ph-fill ph-check-circle text-app-accent ml-auto mt-0.5 mode-check hidden"></i>
+                        </label>
+                    </div>
+
+                    <div id="apiFields" class="space-y-2.5 mt-3 opacity-40 pointer-events-none transition-opacity duration-300">
+                        <div>
+                            <label class="text-xs text-app-text block mb-1" for="apiUrl">Base URL</label>
+                            <input id="apiUrl" type="url" placeholder="https://api.openai.com/v1" class="w-full bg-white/5 border border-app-border rounded-lg px-3 py-2 text-sm text-app-textLight placeholder-app-text outline-none focus:border-app-accent/40 transition-colors font-mono">
+                        </div>
+                        <div>
+                            <label class="text-xs text-app-text block mb-1" for="apiModel">Modelo</label>
+                            <input id="apiModel" type="text" placeholder="gpt-4o-mini" class="w-full bg-white/5 border border-app-border rounded-lg px-3 py-2 text-sm text-app-textLight placeholder-app-text outline-none focus:border-app-accent/40 transition-colors font-mono">
+                        </div>
+                        <div>
+                            <label class="text-xs text-app-text block mb-1" for="apiKey">API Key</label>
+                            <div class="relative">
+                                <input id="apiKey" type="password" placeholder="sk-…" class="w-full bg-white/5 border border-app-border rounded-lg px-3 py-2 pr-16 text-sm text-app-textLight placeholder-app-text outline-none focus:border-app-accent/40 transition-colors font-mono">
+                                <button id="keyToggle" type="button" class="absolute right-1.5 top-1/2 -translate-y-1/2 text-[10px] text-app-text hover:text-app-textLight bg-white/5 rounded px-2 py-1 transition-colors">mostrar</button>
+                            </div>
+                            <p class="text-[10px] text-app-text mt-1.5 flex items-center gap-1"><i class="ph ph-lock-key"></i> A chave fica apenas neste navegador (localStorage).</p>
+                        </div>
+                        <div class="flex items-center gap-2">
+                            <button id="btnTestApi" class="text-xs text-app-textLight bg-white/5 hover:bg-white/10 border border-app-border rounded-lg px-3 py-2 transition-colors active:scale-[0.98]">Testar conexão</button>
+                            <span id="apiStatus" class="text-[11px] text-app-text"></span>
+                        </div>
+                    </div>
+                </section>
+
+                <section class="pt-1">
+                    <div class="text-xs font-medium text-app-text uppercase tracking-wider mb-3">Dados</div>
+                    <div class="flex gap-2">
+                        <button id="btnResetDemo" class="flex-1 text-xs text-app-textLight bg-white/5 hover:bg-white/10 border border-app-border rounded-lg py-2 transition-colors">Restaurar demo</button>
+                        <button id="btnClearData" class="flex-1 text-xs text-app-red bg-app-red/10 hover:bg-app-red/20 border border-app-red/30 rounded-lg py-2 transition-colors">Apagar tudo</button>
+                    </div>
+                </section>
+            </div>
+
+            <div class="px-5 py-3.5 border-t border-app-border flex items-center justify-end gap-2">
+                <button id="settingsSave" class="glow-btn text-sm text-black bg-app-accent hover:bg-[#a9e625] font-medium rounded-lg px-4 py-2 transition-all active:scale-[0.98]">Salvar</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Perfil Modal -->
+    <div id="profileModal" class="hidden fixed inset-0 z-50 items-center justify-center p-4" role="dialog" aria-modal="true" aria-labelledby="profileTitle">
+        <div class="modal-backdrop absolute inset-0 bg-black/70 backdrop-blur-sm"></div>
+        <div class="relative w-full max-w-md bg-app-panel border border-app-border rounded-2xl shadow-2xl modal-panel overflow-hidden">
+            <div class="flex items-center justify-between px-5 py-4 border-b border-app-border">
+                <div class="flex items-center gap-2.5">
+                    <i class="ph-fill ph-user text-app-accent"></i>
+                    <h2 id="profileTitle" class="text-sm font-medium text-app-textLight">Perfil da conta</h2>
+                </div>
+                <button data-close="profileModal" class="w-7 h-7 flex items-center justify-center text-app-text hover:text-app-textLight rounded-md hover:bg-white/5 transition-colors" aria-label="Fechar"><i class="ph ph-x"></i></button>
+            </div>
+            <div class="p-5 space-y-4 max-h-[70vh] overflow-y-auto" id="profileBody"></div>
+        </div>
+    </div>
+
+    <!-- Billing Modal -->
+    <div id="billingModal" class="hidden fixed inset-0 z-50 items-center justify-center p-4" role="dialog" aria-modal="true" aria-labelledby="billingTitle">
+        <div class="modal-backdrop absolute inset-0 bg-black/70 backdrop-blur-sm"></div>
+        <div class="relative w-full max-w-md bg-app-panel border border-app-border rounded-2xl shadow-2xl modal-panel overflow-hidden">
+            <div class="flex items-center justify-between px-5 py-4 border-b border-app-border">
+                <div class="flex items-center gap-2.5">
+                    <i class="ph ph-credit-card text-app-accent"></i>
+                    <h2 id="billingTitle" class="text-sm font-medium text-app-textLight">Cobrança e planos</h2>
+                </div>
+                <button data-close="billingModal" class="w-7 h-7 flex items-center justify-center text-app-text hover:text-app-textLight rounded-md hover:bg-white/5 transition-colors" aria-label="Fechar"><i class="ph ph-x"></i></button>
+            </div>
+            <div class="p-5 space-y-4 max-h-[70vh] overflow-y-auto" id="billingBody"></div>
+        </div>
+    </div>
+
+    <!-- Toasts -->
+    <div id="toasts" class="fixed bottom-20 right-4 z-[60] flex flex-col gap-2 items-end pointer-events-none"></div>
+
+    <script src="js/app.js"></script>
+</body>
+</html>
