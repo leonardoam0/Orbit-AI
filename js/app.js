@@ -37,7 +37,7 @@
       activeId: null,
       model: '',
       workspace: 'Meu Workspace',
-      credits: { used: 0 },
+      tokens: { used: 0 },
       backend: { workspaceId: null, agentId: null, providerId: null },
       provider: { mode: 'backend', baseUrl: '', model: '', apiKey: '', credentialId: null },
     };
@@ -203,7 +203,7 @@
     content.className = 'flex-1 min-w-0';
     content.innerHTML =
       '<div class="flex items-center gap-2 text-xs text-app-text mb-2 flex-wrap">' +
-      '<span class="font-medium text-app-textLight">Devin</span>' +
+      '<span class="font-medium text-app-textLight">Orbit Assistant</span>' +
       '<span class="bg-white/5 border border-white/10 rounded-full px-2 py-0.5 leading-none">' + escapeHtml(modelLabel) + '</span>' +
       '<span>' + relTime(m.ts || Date.now()) + '</span></div>' +
       '<div class="prose">' + renderMarkdown(m.content) + '</div>' +
@@ -276,16 +276,16 @@
     if (renew) renew.textContent = daysLeft <= 0 ? 'Renova hoje' : daysLeft === 1 ? 'Renova em 1 dia' : `Renova em ${daysLeft} dias`;
 
     // Créditos
-    const used = state.credits.used;
+    const used = state.tokens.used;
     const remaining = Math.max(0, CREDIT_TOTAL - used);
     const pct = Math.min(100, Math.round((remaining / CREDIT_TOTAL) * 100));
-    $('#creditsNum').textContent = formatNumber(remaining);
-    $('#creditsPct').textContent = pct + '%';
+    $('#tokensNum').textContent = formatNumber(remaining);
+    $('#tokensPct').textContent = pct + '%';
     const bar = document.querySelector('.credit-bar');
     bar.style.width = pct + '%';
     bar.classList.toggle('is-critical', pct < 10);
     bar.classList.toggle('is-low', pct >= 10 && pct < 30);
-    $('#creditsLow').classList.toggle('hidden', pct >= 30);
+    $('#tokensLow').classList.toggle('hidden', pct >= 30);
 
     // Uso por modelo
     const byModel = {};
@@ -312,7 +312,7 @@
       '<button data-model="' + m.id + '" class="model-row w-full flex items-center justify-between text-xs px-2.5 py-2 rounded-lg border transition-colors ' +
       (state.model === m.id ? 'bg-app-accent/10 border-app-accent/40 text-app-textLight' : 'border-transparent hover:bg-white/5 text-app-textLight') + '">' +
       '<span class="flex items-center gap-2"><i class="ph' + (m.accent.includes('sparkle') ? '-fill' : '') + ' ' + m.icon + ' ' + m.accent + '"></i> ' + m.name + '</span>' +
-      '<span class="text-app-text font-mono">' + m.rate + ' / 1M tok</span>' +
+      '<span class="text-app-text font-mono">configurado</span>' +
       '</button>'
     ).join('');
   }
@@ -326,7 +326,7 @@
       '</button>'
     ).join('');
     const m = MODELS.find((x) => x.id === state.model) || MODELS[0];
-    $('#modelLabel').textContent = m.name;
+    $('#modelLabel').textContent = state.provider.model || m.name;
     $('#providerLabel').textContent = activeProvider() === 'backend' ? 'Orbit Backend' : 'Login necessário';
   }
 
@@ -509,7 +509,7 @@
       const asstMsg = { role: 'assistant', content: acc, model: model, ts: Date.now(), thinking: 'Resposta gerada pelo provedor configurado no backend.', usage: { input: remoteUsage.input_tokens || 0, output: remoteUsage.output_tokens || 0 } };
       convo.messages.push(asstMsg);
       const rate = (MODELS.find((m2) => m2.id === model)?.rate || 1000);
-      state.credits.used += asstMsg.usage.input + asstMsg.usage.output;
+      state.tokens.used += asstMsg.usage.input + asstMsg.usage.output;
       convo.updatedAt = Date.now();
       saveState();
 
@@ -937,7 +937,7 @@
   }
 
   function creditInfo() {
-    const used = state.credits.used;
+    const used = state.tokens.used;
     const remaining = Math.max(0, CREDIT_TOTAL - used);
     const pct = Math.min(100, Math.round((remaining / CREDIT_TOTAL) * 100));
     const now = new Date();
@@ -1093,6 +1093,7 @@
         label: 'Principal',
       });
       state.provider = { mode: 'backend', baseUrl, model, apiKey: '', credentialId: result.provider?.id || null };
+      state.model = 'configured';
       saveState();
       renderModelMenu();
       closeSettings();
