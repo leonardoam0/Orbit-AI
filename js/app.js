@@ -14,10 +14,7 @@
      Constantes
   ---------------------------------------------------------- */
   const MODELS = [
-    { id: 'claude-3-5-sonnet', name: 'Claude 3.5 Sonnet', icon: 'ph-sparkle', accent: 'text-app-accent', rate: 1250 },
-    { id: 'gpt-4o', name: 'GPT-4o', icon: 'ph-openai-logo', accent: 'text-gray-400', rate: 850 },
-    { id: 'gemini-1-5-pro', name: 'Gemini 1.5 Pro', icon: 'ph-google-logo', accent: 'text-blue-400', rate: 600 },
-    { id: 'devin-swe-1-7', name: 'Devin SWE-1.7', icon: 'ph-robot', accent: 'text-purple-400', rate: 1800 },
+    { id: 'configured', name: 'Modelo configurado', icon: 'ph-plugs', accent: 'text-app-accent', rate: 0 },
   ];
 
   const SUGGESTIONS = [
@@ -27,7 +24,7 @@
     'Compare Vite e Webpack para meu monorepo',
   ];
 
-  const CREDIT_TOTAL = 20000;
+  const CREDIT_TOTAL = 100000;
 
   /* ----------------------------------------------------------
      Estado persistido
@@ -296,7 +293,7 @@
       if (m.role === 'assistant' && m.usage) byModel[m.model] = (byModel[m.model] || 0) + m.usage.input + m.usage.output;
     }));
     const modelsTokens = Object.values(byModel).reduce((a, b) => a + b, 0);
-    const tools = 2100, storage = 1800;
+    const tools = 0, storage = 0;
     const total = modelsTokens + tools + storage;
 
     function row(label, value, color, glow) {
@@ -467,6 +464,7 @@
 
     const target = placeholder.querySelector('.stream-target');
     let acc = '';
+    let remoteUsage = { input_tokens: 0, output_tokens: 0 };
     let lastRender = 0;
 
     let stopped = false;
@@ -495,6 +493,8 @@
             if (name === 'token') onDelta(payload.content || acc, 60);
           }, ctrl.signal);
           acc = out.content || acc;
+          remoteUsage = out.usage || remoteUsage;
+          state.provider.model = out.model || state.provider.model;
         } else {
           throw new ProviderError('O backend do Orbit não está autenticado.', 401);
         }
@@ -506,11 +506,10 @@
 
       // Finaliza a mensagem
       const model = state.provider.model || state.model || 'modelo configurado no backend';
-      const est = Math.round((convo.messages.map((m) => m.content.length).reduce((a, b) => a + b, 0) / 4) + 40);
-      const asstMsg = { role: 'assistant', content: acc, model: model, ts: Date.now(), thinking: activeProvider() === 'sim' ? 'Devin analisou padrões de resposta internamente e montou a resposta a partir de exemplos embutidos.' : 'Devin consultou o contexto da conversa e o modelo ' + (model || 'padrão') + ' para gerar a resposta.', usage: { input: est, output: Math.round(acc.length / 4) } };
+      const asstMsg = { role: 'assistant', content: acc, model: model, ts: Date.now(), thinking: 'Resposta gerada pelo provedor configurado no backend.', usage: { input: remoteUsage.input_tokens || 0, output: remoteUsage.output_tokens || 0 } };
       convo.messages.push(asstMsg);
       const rate = (MODELS.find((m2) => m2.id === model)?.rate || 1000);
-      state.credits.used += Math.max(1, Math.round(((asstMsg.usage.input + asstMsg.usage.output) / 1e6) * rate * 10)) / 10;
+      state.credits.used += asstMsg.usage.input + asstMsg.usage.output;
       convo.updatedAt = Date.now();
       saveState();
 
@@ -960,7 +959,7 @@
       if (m.role === 'assistant' && m.usage) byModel[m.model] = (byModel[m.model] || 0) + m.usage.input + m.usage.output;
     }));
     const modelsTokens = Object.values(byModel).reduce((a, b) => a + b, 0);
-    const tools = 2100, storage = 1800;
+    const tools = 0, storage = 0;
     return { modelsTokens: modelsTokens, tools: tools, storage: storage, total: modelsTokens + tools + storage };
   }
 
