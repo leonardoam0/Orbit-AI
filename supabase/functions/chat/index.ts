@@ -174,10 +174,14 @@ Deno.serve(async (req) => {
       headers["HTTP-Referer"] = Deno.env.get("ORBIT_PUBLIC_URL") || "https://orbitai.my";
       headers["X-Title"] = "OrbitAI";
     }
+    const requestBody: Record<string, unknown> = { model, messages: openaiMessages, stream: true };
+    if (credential.data.provider === "openai-compatible" || credential.data.provider === "openrouter") {
+      requestBody.stream_options = { include_usage: true };
+    }
     upstream = await fetch(chatUrl(credential.data.base_url), {
       method: "POST",
       headers,
-      body: JSON.stringify({ model, messages: openaiMessages, stream: true, stream_options: { include_usage: true } }),
+      body: JSON.stringify(requestBody),
     });
   }
 
