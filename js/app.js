@@ -123,18 +123,14 @@
   const STORAGE_KEY = 'orbitai.state.v1';
 
   function seedState() {
-    const now = Date.now();
-    const demo = [
-      { role: 'user', content: 'Quais são as melhores práticas para estruturar um projeto Next.js em times grandes?', ts: now - 1000 * 60 * 32 },
-      { role: 'assistant', content: SIM_RESPONSES.nextjs, model: MODELS[0].id, ts: now - 1000 * 60 * 31, thinking: 'Devin analisou documentação oficial, guias da comunidade e repositórios de referência.', usage: { input: 1240, output: 860 } },
-    ];
     return {
-      conversations: [{ id: uid(), title: 'Estratégia de lançamento', messages: demo }],
+      conversations: [],
       activeId: null,
-      model: MODELS[0].id,
-      workspace: 'Eco Team',
-      credits: { used: 7460 },
-      provider: { mode: 'sim', baseUrl: 'https://api.openai.com/v1', model: '', apiKey: '' },
+      model: '',
+      workspace: 'Meu Workspace',
+      credits: { used: 0 },
+      backend: { workspaceId: null, agentId: null, providerId: null },
+      provider: { mode: 'backend', baseUrl: '', model: '', apiKey: '', credentialId: null },
     };
   }
 
@@ -155,7 +151,9 @@
   }
 
   let state = loadState() || seedState();
-  state.activeId = state.activeId || state.conversations[0] ?.id || null;
+  state.backend = state.backend || { workspaceId: null, agentId: null, providerId: null };
+  state.provider = { mode: 'backend', baseUrl: state.provider?.baseUrl || '', model: state.provider?.model || '', apiKey: '', credentialId: state.provider?.credentialId || null };
+  state.activeId = state.activeId || state.conversations[0]?.id || null;
   saveState();
 
   function uid() {
@@ -296,7 +294,8 @@
   class ProviderError extends Error { constructor(msg, status) { super(msg); this.name = 'ProviderError'; this.status = status; } }
 
   function activeProvider() {
-    return (state.provider.mode === 'api' && state.provider.apiKey) ? 'api' : 'sim';
+    if (window.OrbitBackend?.configured && state.backend?.workspaceId) return 'backend';
+    return 'unavailable';
   }
 
   /* ----------------------------------------------------------
@@ -480,7 +479,7 @@
     ).join('');
     const m = MODELS.find((x) => x.id === state.model) || MODELS[0];
     $('#modelLabel').textContent = m.name;
-    $('#providerLabel').textContent = activeProvider() === 'api' ? 'API externa' : 'Simulação local';
+    $('#providerLabel').textContent = activeProvider() === 'backend' ? 'Orbit Backend' : 'Login necessário';
   }
 
   function renderWorkspace() {
@@ -500,11 +499,82 @@
   }
 
   /* ----------------------------------------------------------
+     Backend / autenticação
+  ---------------------------------------------------------- */
+  function openAuth() {
+    const modal = $('#authModal');
+    if (!modal) return;
+    modal.classList.remove('hidden');
+    modal.classList.add('flex');
+    $('#authEmail')?.focus();
+  }
+  function closeAuth() {
+    const modal = $('#authModal');
+    if (!modal) return;
+    modal.classList.add('hidden');
+    modal.classList.remove('flex');
+  }
+  async function syncBackendAccount() {
+    if (!window.OrbitBackend?.configured) {
+      state.backend = { workspaceId: null, agentId: null, providerId: null };
+      saveState();
+      rerenderAll();
+      return;
+    }
+    try {
+      const session = await window.OrbitBackend.session();
+      if (!session) {
+        state.backend = { workspaceId: null, agentId: null, providerId: null };
+        const name = $('#accountName'); if (name) name.textContent = 'Visitante';
+        const email = $('#accountEmail'); if (email) email.textContent = 'Entre para começar';
+        saveState(); rerenderAll(); return;
+      }
+      const boot = await window.OrbitBackend.bootstrap();
+      state.backend.workspaceId = boot.workspace?.id || null;
+      state.backend.agentId = boot.agent?.id || null;
+      state.workspace = boot.workspace?.name || state.workspace;
+      const name = $('#accountName'); if (name) name.textContent = session.user.user_metadata?.full_name || session.user.email || 'Conta OrbitAI';
+      const email = $('#accountEmail'); if (email) email.textContent = session.user.email || '';
+      saveState(); rerenderAll();
+    } catch (error) {
+      toast('Falha ao iniciar o workspace: ' + (error.message || 'erro desconhecido'), 'error');
+    }
+  }
+  async function authenticate(kind) {
+    const status = $('#authStatus');
+    const email = $('#authEmail').value.trim();
+    const password = $('#authPassword').value;
+    const name = $('#authName').value.trim();
+    if (!email || !password) return;
+    status.textContent = kind === 'signup' ? 'Criando conta…' : 'Entrando…';
+    status.className = 'text-xs text-app-text';
+    try {
+      if (kind === 'signup') {
+        await window.OrbitBackend.signUp(email, password, name);
+        status.textContent = 'Conta criada. Verifique seu email se a confirmação estiver ativada.';
+      } else {
+        await window.OrbitBackend.signIn(email, password);
+        closeAuth();
+        await syncBackendAccount();
+        toast('Sessão iniciada.', 'success');
+      }
+    } catch (error) {
+      status.textContent = error.message || 'Não foi possível autenticar.';
+      status.className = 'text-xs text-app-red';
+    }
+  }
+
+  /* ----------------------------------------------------------
      Ciclo do chat
   ---------------------------------------------------------- */
   async function sendMessage(text) {
     text = text.trim();
     if (!text || generating) return;
+    if (activeProvider() !== 'backend') {
+      if (!window.OrbitBackend?.configured) toast('Configure o Supabase antes de usar o chat.', 'warn');
+      else openAuth();
+      return;
+    }
 
     let convo = activeConvo();
     let isNew = false;
@@ -560,13 +630,22 @@
         }
       };
       try {
-        if (activeProvider() === 'api') {
-          const history = [...convo.messages.slice(0, -1), userMsg];
-          const system = [{ role: 'system', content: 'Você é o Devin, engenheiro de software por IA da plataforma OrbitAI. Responda em português do Brasil, de forma estruturada, citando exemplos de código quando aplicável.' }];
-          const out = await streamApi([...system, ...history], (f) => onDelta(f, 60), () => generation.stop);
+        if (activeProvider() === 'backend') {
+          const ctrl = new AbortController();
+          generation.controller = ctrl;
+          const out = await window.OrbitBackend.streamChat({
+            workspace_id: state.backend.workspaceId,
+            conversation_id: convo.remoteId || null,
+            agent_id: state.backend.agentId,
+            provider_credential_id: state.provider.credentialId || null,
+            content: text,
+          }, (name, payload) => {
+            if (name === 'meta' && payload.conversation_id) convo.remoteId = payload.conversation_id;
+            if (name === 'token') onDelta(payload.content || acc, 60);
+          }, ctrl.signal);
           acc = out.content || acc;
         } else {
-          await streamSimulated(text, (f) => onDelta(f, 40), () => generation.stop);
+          throw new ProviderError('O backend do Orbit não está autenticado.', 401);
         }
       } catch (e) {
         if (e instanceof StopError || generation.stop || e.name === 'AbortError') stopped = true;
@@ -575,7 +654,7 @@
       if (stopped) acc += '\n\n---\n*Geração interrompida — use **Continuar** para retomar.*';
 
       // Finaliza a mensagem
-      const model = activeProvider() === 'api' ? state.provider.model : state.model;
+      const model = state.provider.model || state.model || 'modelo configurado no backend';
       const est = Math.round((convo.messages.map((m) => m.content.length).reduce((a, b) => a + b, 0) / 4) + 40);
       const asstMsg = { role: 'assistant', content: acc, model: model, ts: Date.now(), thinking: activeProvider() === 'sim' ? 'Devin analisou padrões de resposta internamente e montou a resposta a partir de exemplos embutidos.' : 'Devin consultou o contexto da conversa e o modelo ' + (model || 'padrão') + ' para gerar a resposta.', usage: { input: est, output: Math.round(acc.length / 4) } };
       convo.messages.push(asstMsg);
@@ -592,7 +671,7 @@
     } catch (e) {
       if (e instanceof StopError || generation.stop) {
         // interrupção manual: não vira mensagem salva; usuário pode usar "Continuar"
-      } else if (e instanceof ProviderError) {
+      } else if (e instanceof ProviderError || e instanceof Error) {
         placeholder.querySelector('.prose').innerHTML =
           '<div class="border border-app-red/30 bg-app-red/10 rounded-lg p-3 text-sm text-app-red">' +
           '<div><i class="ph ph-warning-circle mr-1.5"></i>Erro na API (' + e.status + '): ' + escapeHtml(e.message) + '</div>' +
@@ -786,6 +865,7 @@
     });
     $('#accountBtn').addEventListener('click', (e) => {
       e.stopPropagation();
+      if (!state.backend?.workspaceId) { openAuth(); return; }
       const pop = $('#accountPopover');
       const open = !pop.classList.contains('hidden');
       closeAllMenus();
@@ -824,7 +904,7 @@
     $('#backdrop').addEventListener('click', closeDrawers);
 
     // Navegação
-    $('#navAgents').addEventListener('click', () => toast('Catálogo de agentes chega na próxima versão.', 'info'));
+    $('#navAgents').addEventListener('click', () => toast('Agentes estão disponíveis no backend; o editor visual será o próximo módulo.', 'info'));
     const creditNav = $('#navCredits');
     creditNav.addEventListener('click', () => {
       const panel = $('#rightSidebar');
@@ -874,6 +954,9 @@
       $('#keyToggle').textContent = k.type === 'password' ? 'mostrar' : 'ocultar';
     });
     $('#btnTestApi').addEventListener('click', testApi);
+    $('#authForm')?.addEventListener('submit', (e) => { e.preventDefault(); authenticate('signin'); });
+    $('#authSignUp')?.addEventListener('click', () => authenticate('signup'));
+    $('#authModal')?.addEventListener('click', (e) => { if (e.target.id === 'authModal' || e.target.classList.contains('modal-backdrop')) closeAuth(); });
     $('#settingsSave').addEventListener('click', saveSettings);
     $('#btnResetDemo').addEventListener('click', () => { if (confirm('Restaurar a conversa de demonstração?')) { state = { ...seedState() }; saveState(); rerenderAll(); toast('Demo restaurada.'); closeSettings(); } });
     $('#btnClearData').addEventListener('click', () => {
@@ -963,7 +1046,7 @@
      Configurações / Provider
   ---------------------------------------------------------- */
   function syncProviderUI() {
-    const mode = document.querySelector('input[name="providerMode"]:checked').value;
+    const mode = document.querySelector('input[name="providerMode"]:checked')?.value || 'backend';
     const fields = $('#apiFields');
     fields.classList.toggle('opacity-40', mode !== 'api');
     fields.classList.toggle('pointer-events-none', mode !== 'api');
@@ -974,10 +1057,10 @@
     closeAllMenus();
     const p = state.provider;
     const sel = p.mode;
-    document.querySelector('input[name="providerMode"][value="' + sel + '"]').checked = true;
+    (document.querySelector('input[name="providerMode"][value="backend"]') || document.querySelector('input[name="providerMode"][value="' + sel + '"]'))?.setAttribute('checked', 'checked');
     $('#apiUrl').value = p.baseUrl || '';
     $('#apiModel').value = p.model || '';
-    $('#apiKey').value = p.apiKey || '';
+    $('#apiKey').value = '';
     $('#apiStatus').textContent = '';
     syncProviderUI();
     const m = $('#settingsModal');
@@ -1127,38 +1210,51 @@
     openModal('billingModal');
   }
 
-  function logoutAccount() {
-    if (confirm('Encerrar a sessão de demonstração? Suas conversas permanecerão salvas neste navegador.')) {
-      toast('Sessão de demonstração encerrada.', 'warn');
-    }
-  }
-  function saveSettings() {
-    const mode = document.querySelector('input[name="providerMode"]:checked').value;
-    state.provider = {
-      mode,
-      baseUrl: $('#apiUrl').value.trim() || 'https://api.openai.com/v1',
-      model: $('#apiModel').value.trim(),
-      apiKey: $('#apiKey').value.trim(),
-    };
+  async function logoutAccount() {
+    if (!confirm('Encerrar sua sessão do OrbitAI?')) return;
+    await window.OrbitBackend?.signOut();
+    state.backend = { workspaceId: null, agentId: null, providerId: null };
     saveState();
-    renderModelMenu();
-    closeSettings();
-    toast(mode === 'api' ? 'Provedor de API configurado.' : 'Modo simulação local ativo.', mode === 'api' ? 'success' : 'info');
+    rerenderAll();
+    openAuth();
+  }
+  async function saveSettings() {
+    if (!window.OrbitBackend?.configured || !state.backend?.workspaceId) {
+      openAuth();
+      return;
+    }
+    const baseUrl = $('#apiUrl').value.trim();
+    const model = $('#apiModel').value.trim();
+    const apiKey = $('#apiKey').value.trim();
+    if (!baseUrl || !model || !apiKey) {
+      toast('Informe URL, modelo e chave do provedor.', 'warn');
+      return;
+    }
+    let provider = 'openai-compatible';
+    if (/anthropic\.com/i.test(baseUrl)) provider = 'anthropic';
+    else if (/openrouter/i.test(baseUrl)) provider = 'openrouter';
+    else if (/localhost|127\.0\.0\.1/i.test(baseUrl)) provider = 'sglang';
+    try {
+      const result = await window.OrbitBackend.saveProvider({
+        workspace_id: state.backend.workspaceId,
+        provider,
+        base_url: baseUrl,
+        model,
+        api_key: apiKey,
+        label: 'Principal',
+      });
+      state.provider = { mode: 'backend', baseUrl, model, apiKey: '', credentialId: result.provider?.id || null };
+      saveState();
+      renderModelMenu();
+      closeSettings();
+      toast('Provedor salvo com criptografia no backend.', 'success');
+    } catch (error) {
+      toast('Não foi possível salvar o provedor: ' + (error.message || 'erro desconhecido'), 'error');
+    }
   }
   async function testApi() {
-    const status = $('#apiStatus');
-    status.textContent = 'Testando…';
-    status.className = 'text-[11px] text-app-text';
-    try {
-      const url = ($('#apiUrl').value.trim() || 'https://api.openai.com/v1').replace(/\/+$/, '');
-      const key = $('#apiKey').value.trim();
-      const res = await fetch(url + '/models', { headers: { Authorization: 'Bearer ' + key } });
-      if (res.ok) { status.textContent = 'Conectado ✓'; status.className = 'text-[11px] text-app-accent'; }
-      else { status.textContent = 'Falha HTTP ' + res.status; status.className = 'text-[11px] text-app-red'; }
-    } catch (err) {
-      status.textContent = 'Falha de rede / CORS — rode o app em um servidor local (ex.: npm run serve).';
-      status.className = 'text-[11px] text-app-red';
-    }
+    $('#apiStatus').textContent = 'A validação ocorre ao salvar e na primeira geração.';
+    $('#apiStatus').className = 'text-[11px] text-app-text';
   }
 
   /* ----------------------------------------------------------
@@ -1203,6 +1299,10 @@
     bindEvents();
     rerenderAll();
     runPreloader();
+    if (window.OrbitBackend?.configured) {
+      window.OrbitBackend.onAuthStateChange(() => { setTimeout(syncBackendAccount, 0); });
+    }
+    syncBackendAccount();
   }
 
   document.addEventListener('DOMContentLoaded', init);
