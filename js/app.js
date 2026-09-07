@@ -897,12 +897,10 @@
      Configurações / Provider
   ---------------------------------------------------------- */
   function syncProviderUI() {
-    const mode = document.querySelector('input[name="providerMode"]:checked')?.value || 'backend';
     const fields = $('#apiFields');
-    fields.classList.toggle('opacity-40', mode !== 'api');
-    fields.classList.toggle('pointer-events-none', mode !== 'api');
-    $$('.mode-check').forEach((i) => i.classList.add('hidden'));
-    document.querySelector('label[data-mode="' + mode + '"] .mode-check').classList.remove('hidden');
+    fields.classList.remove('opacity-40', 'pointer-events-none');
+    $('.mode-check').forEach((i) => i.classList.add('hidden'));
+    document.querySelector('label[data-mode="backend"] .mode-check')?.classList.remove('hidden');
   }
   function openSettings() {
     closeAllMenus();
