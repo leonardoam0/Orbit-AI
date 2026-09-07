@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+<html lang="pt-BR" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="OrbitAI — entre na sua conta">
+    <title>OrbitAI — Entrar</title>
+    <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ccircle cx='50' cy='50' r='34' fill='none' stroke='%23c0ff2d' stroke-width='7' stroke-dasharray='150 70' stroke-linecap='round'/%3E%3Ccircle cx='50' cy='50' r='10' fill='%23c0ff2d'/%3E%3C/svg%3E">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <script src="https://unpkg.com/@phosphor-icons/web"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: { extend: {
+                fontFamily: { sans: ['Inter','sans-serif'], mono: ['JetBrains Mono','monospace'] },
+                colors: { app: { bg:'#090a0f', panel:'#12141c', border:'rgba(255,255,255,0.06)', accent:'#c0ff2d', text:'#8a94a6', textLight:'#e2e8f0', red:'#f8717a' } }
+            } }
+        };
+    </script>
+    <link rel="stylesheet" href="css/app.css">
+</head>
+<body class="bg-app-bg text-app-text font-sans min-h-screen flex items-center justify-center p-4 selection:bg-app-accent selection:text-black">
+
+    <div class="w-full max-w-sm animate-scale-in">
+        <div class="flex flex-col items-center mb-8">
+            <div class="w-12 h-12 rounded-xl border border-app-accent/30 bg-app-accent/10 flex items-center justify-center text-app-accent glow-accent mb-3">
+                <i class="ph-fill ph-atom text-2xl"></i>
+            </div>
+            <h1 class="text-app-textLight text-xl font-semibold tracking-wide">OrbitAI</h1>
+            <p class="text-sm text-app-text mt-1" id="subtitle">Entre para continuar</p>
+        </div>
+
+        <div id="setupNotice" class="hidden mb-4 rounded-xl border border-app-red/30 bg-app-red/10 p-3.5 text-xs text-app-red">
+            <i class="ph ph-warning-circle mr-1"></i>
+            Supabase não configurado. Edite <code class="font-mono">js/config.js</code> com a URL e a anon key do seu projeto.
+        </div>
+
+        <div class="bg-app-panel border border-app-border rounded-2xl p-6 shadow-2xl space-y-4">
+            <div id="nameField" class="hidden">
+                <label class="text-xs text-app-text block mb-1.5" for="name">Nome</label>
+                <input id="name" type="text" autocomplete="name" placeholder="Seu nome"
+                    class="w-full bg-white/5 border border-app-border rounded-lg px-3 py-2.5 text-sm text-app-textLight placeholder-app-text outline-none focus:border-app-accent/40 transition-colors">
+            </div>
+            <div>
+                <label class="text-xs text-app-text block mb-1.5" for="email">E-mail</label>
+                <input id="email" type="email" autocomplete="email" placeholder="voce@email.com"
+                    class="w-full bg-white/5 border border-app-border rounded-lg px-3 py-2.5 text-sm text-app-textLight placeholder-app-text outline-none focus:border-app-accent/40 transition-colors">
+            </div>
+            <div>
+                <label class="text-xs text-app-text block mb-1.5" for="password">Senha</label>
+                <input id="password" type="password" autocomplete="current-password" placeholder="••••••••"
+                    class="w-full bg-white/5 border border-app-border rounded-lg px-3 py-2.5 text-sm text-app-textLight placeholder-app-text outline-none focus:border-app-accent/40 transition-colors">
+            </div>
+
+            <div id="authError" class="hidden text-xs text-app-red bg-app-red/10 border border-app-red/30 rounded-lg px-3 py-2"></div>
+            <div id="authInfo" class="hidden text-xs text-app-accent bg-app-accent/10 border border-app-accent/30 rounded-lg px-3 py-2"></div>
+
+            <button id="btnSubmit" class="glow-btn w-full bg-app-accent hover:bg-[#a9e625] active:scale-[0.98] text-[#090a0f] font-medium text-sm py-2.5 rounded-lg transition-all flex items-center justify-center gap-2">
+                <span id="btnLabel">Entrar</span>
+            </button>
+
+            <div class="flex items-center gap-3 text-[10px] text-app-text">
+                <div class="h-px flex-1 bg-app-border"></div> ou <div class="h-px flex-1 bg-app-border"></div>
+            </div>
+
+            <button id="btnGoogle" class="w-full bg-white/5 hover:bg-white/10 border border-app-border text-app-textLight text-sm py-2.5 rounded-lg transition-colors flex items-center justify-center gap-2">
+                <i class="ph ph-google-logo text-base"></i> Continuar com Google
+            </button>
+        </div>
+
+        <p class="text-center text-xs text-app-text mt-5">
+            <span id="toggleText">Não tem conta?</span>
+            <button id="toggleMode" class="text-app-accent hover:underline font-medium">Criar conta</button>
+        </p>
+    </div>
+
+    <script src="js/config.js"></script>
+    <script>
+    (function () {
+        'use strict';
+        const $ = (s) => document.querySelector(s);
+        let mode = 'signin';
+
+        if (!window.OrbitDB) {
+            // db.js não carregado ainda — carrega inline mínimo
+        }
+
+        const cfg = window.ORBIT_CONFIG || {};
+        const configured = cfg.SUPABASE_URL && !cfg.SUPABASE_URL.includes('SEU-PROJETO');
+        if (!configured) $('#setupNotice').classList.remove('hidden');
+
+        const sb = configured ? window.supabase.createClient(cfg.SUPABASE_URL, cfg.SUPABASE_ANON_KEY) : null;
+
+        // Já logado? vai direto pro app
+        if (sb) sb.auth.getSession().then(({ data }) => {
+            if (data.session) location.replace('index.html');
+        });
+
+        function showError(msg) {
+            const el = $('#authError');
+            el.textContent = msg;
+            el.classList.remove('hidden');
+            $('#authInfo').classList.add('hidden');
+        }
+        function showInfo(msg) {
+            const el = $('#authInfo');
+            el.textContent = msg;
+            el.classList.remove('hidden');
+            $('#authError').classList.add('hidden');
+        }
+        function setLoading(on) {
+            $('#btnSubmit').disabled = on;
+            $('#btnLabel').textContent = on ? 'Aguarde…' : (mode === 'signin' ? 'Entrar' : 'Criar conta');
+        }
+
+        $('#toggleMode').addEventListener('click', () => {
+            mode = mode === 'signin' ? 'signup' : 'signin';
+            $('#nameField').classList.toggle('hidden', mode === 'signin');
+            $('#subtitle').textContent = mode === 'signin' ? 'Entre para continuar' : 'Crie sua conta grátis';
+            $('#btnLabel').textContent = mode === 'signin' ? 'Entrar' : 'Criar conta';
+            $('#toggleText').textContent = mode === 'signin' ? 'Não tem conta?' : 'Já tem conta?';
+            $('#toggleMode').textContent = mode === 'signin' ? 'Criar conta' : 'Entrar';
+            $('#authError').classList.add('hidden');
+            $('#authInfo').classList.add('hidden');
+        });
+
+        async function submit() {
+            if (!sb) { showError('Configure o Supabase em js/config.js primeiro.'); return; }
+            const email = $('#email').value.trim();
+            const password = $('#password').value;
+            const name = $('#name').value.trim();
+            if (!email || !password) { showError('Preencha e-mail e senha.'); return; }
+            if (password.length < 6) { showError('A senha precisa de pelo menos 6 caracteres.'); return; }
+            setLoading(true);
+            try {
+                if (mode === 'signin') {
+                    const { error } = await sb.auth.signInWithPassword({ email, password });
+                    if (error) throw error;
+                    location.replace('index.html');
+                } else {
+                    const { data, error } = await sb.auth.signUp({
+                        email, password, options: { data: { full_name: name || email.split('@')[0] } },
+                    });
+                    if (error) throw error;
+                    if (data.session) location.replace('index.html');
+                    else showInfo('Conta criada! Verifique seu e-mail para confirmar e depois entre.');
+                }
+            } catch (e) {
+                showError(e.message === 'Invalid login credentials' ? 'E-mail ou senha incorretos.' : e.message);
+            } finally { setLoading(false); }
+        }
+
+        $('#btnSubmit').addEventListener('click', submit);
+        $('#password').addEventListener('keydown', (e) => { if (e.key === 'Enter') submit(); });
+        $('#email').addEventListener('keydown', (e) => { if (e.key === 'Enter') submit(); });
+
+        $('#btnGoogle').addEventListener('click', async () => {
+            if (!sb) { showError('Configure o Supabase em js/config.js primeiro.'); return; }
+            const { error } = await sb.auth.signInWithOAuth({
+                provider: 'google',
+                options: { redirectTo: location.origin + location.pathname.replace(/[^/]*$/, 'index.html') },
+            });
+            if (error) showError(error.message);
+        });
+    })();
+    </script>
+</body>
+</html>

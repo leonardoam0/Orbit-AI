@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="pt-BR" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Conversa compartilhada — OrbitAI">
+    <title>OrbitAI — Conversa compartilhada</title>
+    <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ccircle cx='50' cy='50' r='34' fill='none' stroke='%23c0ff2d' stroke-width='7' stroke-dasharray='150 70' stroke-linecap='round'/%3E%3Ccircle cx='50' cy='50' r='10' fill='%23c0ff2d'/%3E%3C/svg%3E">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <script src="https://unpkg.com/@phosphor-icons/web"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: { extend: {
+                fontFamily: { sans: ['Inter','sans-serif'], mono: ['JetBrains Mono','monospace'] },
+                colors: { app: { bg:'#090a0f', panel:'#12141c', border:'rgba(255,255,255,0.06)', accent:'#c0ff2d', text:'#8a94a6', textLight:'#e2e8f0', red:'#f8717a' } }
+            } }
+        };
+    </script>
+    <link rel="stylesheet" href="css/app.css">
+</head>
+<body class="bg-app-bg text-app-text font-sans min-h-screen selection:bg-app-accent selection:text-black">
+
+    <header class="border-b border-app-border sticky top-0 bg-app-bg/80 backdrop-blur-md z-10">
+        <div class="max-w-3xl mx-auto px-4 h-14 flex items-center justify-between">
+            <div class="flex items-center gap-2.5">
+                <div class="w-7 h-7 rounded-lg border border-app-accent/30 bg-app-accent/10 flex items-center justify-center text-app-accent">
+                    <i class="ph-fill ph-atom"></i>
+                </div>
+                <span class="text-app-textLight font-semibold">OrbitAI</span>
+                <span class="text-[10px] text-app-text bg-white/5 border border-app-border rounded-full px-2 py-0.5">conversa compartilhada</span>
+            </div>
+            <a href="login.html" class="text-xs text-black bg-app-accent hover:bg-[#a9e625] font-medium rounded-lg px-3 py-1.5 transition-colors">Criar conta grátis</a>
+        </div>
+    </header>
+
+    <main class="max-w-3xl mx-auto px-4 py-8">
+        <div id="state" class="text-center py-16 text-app-text text-sm">
+            <span class="typing-dots mx-auto mb-3"><span></span><span></span><span></span></span>
+            <div>Carregando conversa…</div>
+        </div>
+        <h1 id="title" class="hidden text-app-textLight text-xl font-semibold mb-1"></h1>
+        <p id="date" class="hidden text-xs text-app-text mb-8"></p>
+        <div id="thread" class="space-y-8"></div>
+    </main>
+
+    <script src="js/config.js"></script>
+    <script>
+    (function () {
+        'use strict';
+        const $ = (s) => document.querySelector(s);
+        const cfg = window.ORBIT_CONFIG || {};
+
+        function escapeHtml(s) {
+            return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+        }
+        function renderMarkdown(src) {
+            let codes = [];
+            let text = String(src).replace(/```(\w*)\n?([\s\S]*?)(```|$)/g, (m, lang, code) => {
+                codes.push({ lang: lang || 'code', code });
+                return '\u0000' + (codes.length - 1) + '\u0000';
+            });
+            let html = escapeHtml(text)
+                .replace(/\[([^\]]+)\]\((https?:\/\/[^\s)]+)\)/g, '<a href="$2" target="_blank" rel="noopener">$1</a>')
+                .replace(/`([^`]+)`/g, '<code class="inline">$1</code>')
+                .replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>');
+            const lines = html.split('\n');
+            let out = '', inUl = false, inOl = false;
+            const close = () => { if (inUl) { out += '</ul>'; inUl = false; } if (inOl) { out += '</ol>'; inOl = false; } };
+            for (const line of lines) {
+                const mc = line.match(/^\u0000(\d+)\u0000$/);
+                if (mc) { close(); const c = codes[+mc[1]];
+                    out += '<div class="code-block"><div class="px-4 py-2 bg-white/[0.03] border-b border-app-border text-xs text-app-text">' + escapeHtml(c.lang) + '</div><pre><code>' + escapeHtml(c.code) + '</code></pre></div>'; continue; }
+                if (/^###\s/.test(line)) { close(); out += '<h3>' + line.slice(4) + '</h3>'; }
+                else if (/^##\s/.test(line)) { close(); out += '<h2>' + line.slice(3) + '</h2>'; }
+                else if (/^#\s/.test(line)) { close(); out += '<h1>' + line.slice(2) + '</h1>'; }
+                else if (/^-\s/.test(line)) { if (!inUl) { close(); out += '<ul>'; inUl = true; } out += '<li>' + line.slice(2) + '</li>'; }
+                else if (/^\d+\.\s/.test(line)) { if (!inOl) { close(); out += '<ol>'; inOl = true; } out += '<li>' + line.replace(/^\d+\.\s/, '') + '</li>'; }
+                else if (line.trim() === '') { close(); }
+                else { close(); out += '<p>' + line + '</p>'; }
+            }
+            close();
+            return out;
+        }
+        function fail(msg) {
+            $('#state').innerHTML = '<i class="ph ph-warning-circle text-app-red text-2xl"></i><div class="mt-2">' + escapeHtml(msg) + '</div>';
+        }
+
+        async function load() {
+            const slug = new URLSearchParams(location.search).get('s');
+            if (!slug) { fail('Link inválido.'); return; }
+            if (!cfg.SUPABASE_URL || cfg.SUPABASE_URL.includes('SEU-PROJETO')) { fail('Supabase não configurado.'); return; }
+            const sb = window.supabase.createClient(cfg.SUPABASE_URL, cfg.SUPABASE_ANON_KEY);
+
+            const { data: share, error } = await sb.from('shares').select('conversation_id').eq('slug', slug).single();
+            if (error || !share) { fail('Conversa não encontrada ou link expirado.'); return; }
+            const { data: convo } = await sb.from('conversations').select('title, created_at').eq('id', share.conversation_id).single();
+            const { data: msgs } = await sb.from('messages').select('role, content, model, created_at')
+                .eq('conversation_id', share.conversation_id).order('created_at');
+
+            $('#state').classList.add('hidden');
+            $('#title').textContent = convo?.title || 'Conversa';
+            $('#title').classList.remove('hidden');
+            $('#date').textContent = 'Compartilhada em ' + new Date(share.created_at || convo?.created_at || Date.now()).toLocaleDateString('pt-BR');
+            $('#date').classList.remove('hidden');
+            document.title = 'OrbitAI — ' + (convo?.title || 'Conversa');
+
+            $('#thread').innerHTML = (msgs || []).map((m) => {
+                if (m.role === 'user') {
+                    return '<div class="flex flex-col items-end gap-1"><div class="bg-app-panel border border-app-border text-app-textLight px-4 py-3 rounded-2xl rounded-tr-sm max-w-2xl text-sm leading-relaxed whitespace-pre-wrap">' + escapeHtml(m.content) + '</div></div>';
+                }
+                return '<div class="flex gap-4"><div class="w-8 h-8 rounded-lg bg-white/5 border border-white/10 flex items-center justify-center text-app-textLight flex-shrink-0 mt-1"><i class="ph-fill ph-robot text-lg"></i></div>' +
+                    '<div class="flex-1 min-w-0"><div class="prose">' + renderMarkdown(m.content) + '</div></div></div>';
+            }).join('');
+        }
+        load();
+    })();
+    </script>
+</body>
+</html>

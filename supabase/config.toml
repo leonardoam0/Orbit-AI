@@ -1,0 +1,4 @@
+project_id = "orbit-ai"
+
+[functions.chat]
+verify_jwt = false

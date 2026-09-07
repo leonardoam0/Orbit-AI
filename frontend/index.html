@@ -11,6 +11,7 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
     <script src="https://unpkg.com/@phosphor-icons/web"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
     <script>
         tailwind.config = {
             darkMode: 'class',
@@ -77,23 +78,8 @@
         <div class="px-4 py-2">
             <button id="btnNewChat" class="glow-btn w-full bg-app-accent hover:bg-[#a9e625] active:scale-[0.98] text-[#090a0f] font-medium text-sm py-2.5 px-4 rounded-lg flex items-center justify-between transition-all duration-200">
                 <span class="flex items-center gap-2"><i class="ph ph-plus text-base"></i> Nova conversa</span>
-                <span class="font-mono text-[10px] opacity-60">⌘ K</span>
+                <span class="font-mono text-[10px] opacity-60">Ctrl K</span>
             </button>
-        </div>
-
-        <div class="px-4 py-3">
-            <div class="text-xs font-medium text-app-text mb-2 uppercase tracking-wider">Workspace</div>
-            <div class="relative">
-                <button id="wsButton" class="w-full flex items-center justify-between bg-white/5 hover:bg-white/10 border border-app-border rounded-md px-3 py-2 text-sm text-app-textLight transition-colors" aria-haspopup="true" aria-expanded="false">
-                    <span class="flex items-center gap-2 truncate"><i class="ph ph-users"></i> <span id="wsLabel">Eco Team</span></span>
-                    <i class="ph ph-caret-down text-app-text transition-transform duration-200" id="wsCaret"></i>
-                </button>
-                <ul id="wsMenu" class="menu-panel absolute left-0 right-0 top-full mt-1 z-30 bg-app-panel border border-app-border rounded-lg shadow-2xl py-1 hidden">
-                    <li><button data-ws="Eco Team" class="menu-item w-full flex items-center gap-3 px-3 py-2 text-sm hover:bg-white/5 text-app-textLight transition-colors">Eco Team <i class="ph ph-check text-app-accent ml-auto hidden"></i></button></li>
-                    <li><button data-ws="Pesquisas Labs" class="menu-item w-full flex items-center gap-3 px-3 py-2 text-sm hover:bg-white/5 text-app-textLight transition-colors">Pesquisas Labs <i class="ph ph-check text-app-accent ml-auto hidden"></i></button></li>
-                    <li><button data-ws="Pessoal" class="menu-item w-full flex items-center gap-3 px-3 py-2 text-sm hover:bg-white/5 text-app-textLight transition-colors">Pessoal <i class="ph ph-check text-app-accent ml-auto hidden"></i></button></li>
-                </ul>
-            </div>
         </div>
 
         <div class="px-4 py-3 flex-1 overflow-y-auto">
@@ -111,7 +97,6 @@
         <div class="p-4 border-t border-app-border space-y-1">
             <button id="navAgents" class="w-full flex items-center gap-3 px-2 py-2 rounded-md hover:bg-white/5 text-sm transition-colors text-app-text hover:text-app-textLight">
                 <i class="ph ph-robot"></i> Agentes
-                <span class="ml-auto text-[10px] bg-white/5 border border-app-border rounded-full px-1.5 py-0.5">em breve</span>
             </button>
             <button id="navCredits" class="w-full flex items-center gap-3 px-2 py-2 rounded-md hover:bg-white/5 text-sm transition-colors text-app-text hover:text-app-textLight">
                 <i class="ph ph-coins"></i> Créditos e tokens
@@ -124,13 +109,13 @@
         <div class="p-4 border-t border-app-border relative">
             <button id="accountBtn" class="w-full flex items-center justify-between hover:bg-white/5 rounded-md p-2 transition-colors -ml-2" aria-haspopup="true" aria-expanded="false">
                 <div class="flex items-center gap-3">
-                    <div class="w-8 h-8 rounded-full bg-purple-500/20 text-purple-400 flex items-center justify-center font-medium text-xs border border-purple-500/30 relative">
-                        LO
+                    <div id="userAvatar" class="w-8 h-8 rounded-full bg-purple-500/20 text-purple-400 flex items-center justify-center font-medium text-xs border border-purple-500/30 relative overflow-hidden">
+                        <span id="userInitials">··</span>
                         <span class="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 bg-app-accent border-2 border-app-bg rounded-full"></span>
                     </div>
-                    <div class="text-left">
-                        <div class="text-sm font-medium text-app-textLight leading-tight">Leonardo Oliveira</div>
-                        <div class="text-xs text-app-text">leo@eco.team</div>
+                    <div class="text-left min-w-0">
+                        <div id="userName" class="text-sm font-medium text-app-textLight leading-tight truncate">…</div>
+                        <div id="userEmail" class="text-xs text-app-text truncate">…</div>
                     </div>
                 </div>
                 <i class="ph ph-caret-up text-app-text transition-transform duration-200" id="accountCaret"></i>
@@ -143,7 +128,7 @@
                     <i class="ph ph-user text-app-text"></i> Perfil
                 </button>
                 <button data-acct="prefs" class="acct-item w-full flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-white/5 text-sm text-app-textLight transition-colors">
-                    <i class="ph ph-faders text-app-text"></i> Provedor e dados
+                    <i class="ph ph-faders text-app-text"></i> Preferências
                 </button>
                 <button data-acct="billing" class="acct-item w-full flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-white/5 text-sm text-app-textLight transition-colors">
                     <i class="ph ph-credit-card text-app-text"></i> Cobrança e planos
@@ -164,41 +149,51 @@
                 <button id="btnMenuLeft" class="lg:hidden w-8 h-8 flex items-center justify-center text-app-text hover:text-app-textLight bg-white/5 rounded-md transition-colors" aria-label="Abrir menu">
                     <i class="ph ph-list text-lg"></i>
                 </button>
-                <div class="w-6 h-6 rounded flex items-center justify-center text-app-textLight flex-shrink-0">
-                    <i class="ph-fill ph-robot text-xl"></i>
-                </div>
-                <div class="min-w-0">
-                    <div class="flex items-center gap-2">
-                        <span class="text-sm font-medium text-app-textLight">Devin</span>
-                        <div class="flex items-center gap-1.5 text-xs text-app-text bg-white/5 px-2 py-0.5 rounded-full border border-white/10">
-                            <span class="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse-soft"></span> Online
+                <div class="relative">
+                    <button id="agentBtn" class="flex items-center gap-3 hover:bg-white/5 rounded-lg px-2 py-1.5 -ml-2 transition-colors" aria-haspopup="true" aria-expanded="false">
+                        <div class="w-6 h-6 rounded flex items-center justify-center text-app-textLight flex-shrink-0">
+                            <i id="agentIcon" class="ph-fill ph-robot text-xl"></i>
                         </div>
-                    </div>
-                    <div class="text-xs text-app-text">Engenheiro de Software IA</div>
+                        <div class="min-w-0 text-left">
+                            <div class="flex items-center gap-2">
+                                <span id="agentName" class="text-sm font-medium text-app-textLight">Orbit</span>
+                                <div class="flex items-center gap-1.5 text-xs text-app-text bg-white/5 px-2 py-0.5 rounded-full border border-white/10">
+                                    <span class="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse-soft"></span> Online
+                                </div>
+                                <i class="ph ph-caret-down text-app-text text-xs"></i>
+                            </div>
+                            <div id="agentDesc" class="text-xs text-app-text truncate">Assistente geral</div>
+                        </div>
+                    </button>
+                    <ul id="agentMenu" class="menu-panel absolute left-0 top-full mt-1 w-72 bg-app-panel border border-app-border rounded-lg shadow-2xl py-1 hidden z-30" role="menu">
+                        <li class="px-3 py-1.5 text-[10px] uppercase tracking-wider text-app-text">Agentes</li>
+                        <li id="agentItems"></li>
+                        <li class="border-t border-app-border mt-1"><button id="agentManage" class="menu-item w-full flex items-center gap-2 px-3 py-2 text-xs text-app-text hover:text-app-textLight hover:bg-white/5 transition-colors"><i class="ph ph-robot"></i> Gerenciar agentes…</button></li>
+                    </ul>
                 </div>
             </div>
 
             <div class="flex items-center gap-2 lg:gap-3">
                 <div class="relative">
                     <button id="modelBtn" class="flex items-center gap-2 text-xs text-app-text hover:text-app-textLight bg-app-panel border border-app-border px-3 py-1.5 rounded-md transition-colors" aria-haspopup="true" aria-expanded="false">
-                        <i class="ph ph-sparkle text-app-accent"></i> <span id="modelLabel">Claude 3.5 Sonnet</span> <i class="ph ph-caret-down"></i>
+                        <i class="ph ph-sparkle text-app-accent"></i> <span id="modelLabel">Modelo</span> <i class="ph ph-caret-down"></i>
                     </button>
-                    <ul id="modelMenu" class="menu-panel absolute right-0 top-full mt-1 w-56 bg-app-panel border border-app-border rounded-lg shadow-2xl py-1 hidden" role="menu">
+                    <ul id="modelMenu" class="menu-panel absolute right-0 top-full mt-1 w-64 bg-app-panel border border-app-border rounded-lg shadow-2xl py-1 hidden z-30" role="menu">
                         <li class="px-3 py-1.5 text-[10px] uppercase tracking-wider text-app-text">Modelos</li>
                         <li id="modelItems"></li>
-                        <li class="border-t border-app-border mt-1"><button data-modelact="config" class="menu-item w-full flex items-center gap-2 px-3 py-2 text-xs text-app-text hover:text-app-textLight hover:bg-white/5 transition-colors"><i class="ph ph-plugs"></i> Configurar provedor… <span class="ml-auto text-[9px] bg-white/10 rounded px-1.5 py-0.5">API</span></button></li>
                     </ul>
                 </div>
 
                 <div class="hidden lg:block w-px h-4 bg-app-border"></div>
 
                 <button id="btnExport" class="hidden lg:flex w-8 h-8 items-center justify-center text-app-text hover:text-app-textLight bg-white/5 hover:bg-white/10 rounded-md transition-colors" title="Exportar conversa (.md)" aria-label="Exportar conversa"><i class="ph ph-export"></i></button>
-                <button id="btnShare" class="hidden lg:flex w-8 h-8 items-center justify-center text-app-text hover:text-app-textLight bg-white/5 hover:bg-white/10 rounded-md transition-colors" title="Copiar conversa" aria-label="Copiar conversa"><i class="ph ph-share-network"></i></button>
+                <button id="btnShare" class="hidden lg:flex w-8 h-8 items-center justify-center text-app-text hover:text-app-textLight bg-white/5 hover:bg-white/10 rounded-md transition-colors" title="Compartilhar conversa (link público)" aria-label="Compartilhar conversa"><i class="ph ph-share-network"></i></button>
                 <div class="relative hidden lg:block">
                     <button id="btnMore" class="w-8 h-8 flex items-center justify-center text-app-text hover:text-app-textLight bg-white/5 hover:bg-white/10 rounded-md transition-colors" aria-label="Mais ações" aria-haspopup="true"><i class="ph ph-dots-three-vertical"></i></button>
                     <ul id="moreMenu" class="menu-panel absolute right-0 top-full mt-1 w-52 bg-app-panel border border-app-border rounded-lg shadow-2xl py-1 hidden z-30">
                         <li><button data-more="copy" class="menu-item w-full flex items-center gap-2.5 px-3 py-2 text-xs hover:bg-white/5 text-app-textLight transition-colors"><i class="ph ph-copy text-app-text"></i> Copiar conversa</button></li>
                         <li><button data-more="export" class="menu-item w-full flex items-center gap-2.5 px-3 py-2 text-xs hover:bg-white/5 text-app-textLight transition-colors"><i class="ph ph-export text-app-text"></i> Exportar .md</button></li>
+                        <li><button data-more="share" class="menu-item w-full flex items-center gap-2.5 px-3 py-2 text-xs hover:bg-white/5 text-app-textLight transition-colors"><i class="ph ph-share-network text-app-text"></i> Compartilhar link</button></li>
                         <li><button data-more="clear" class="menu-item w-full flex items-center gap-2.5 px-3 py-2 text-xs hover:bg-white/5 text-app-warning transition-colors"><i class="ph ph-broom text-app-text"></i> Limpar conversa</button></li>
                     </ul>
                 </div>
@@ -216,7 +211,7 @@
                     <i class="ph-fill ph-robot text-3xl"></i>
                 </div>
                 <h2 class="text-app-textLight text-lg font-medium">Como posso ajudar hoje?</h2>
-                <p class="text-sm text-app-text mt-1 mb-6 max-w-sm">Pergunte qualquer coisa ou parta de uma sugestão — o Devin responde com fontes e código.</p>
+                <p class="text-sm text-app-text mt-1 mb-6 max-w-sm">Pergunte qualquer coisa ou parta de uma sugestão — os agentes respondem com fontes e código.</p>
                 <div id="suggestChips" class="flex flex-wrap items-center justify-center gap-2 max-w-md"></div>
             </div>
 
@@ -224,7 +219,7 @@
             <div id="chat" class="w-full mx-auto"></div>
         </div>
 
-        <!-- Botão "voltar ao final" (aparece quando o usuário sobe durante a geração) -->
+        <!-- Botão "voltar ao final" -->
         <button id="btnToBottom" class="hidden absolute left-1/2 -translate-x-1/2 bottom-40 lg:bottom-44 z-30 flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-app-accent/40 bg-app-panel/90 backdrop-blur-sm text-xs text-app-accent shadow-lg hover:bg-app-panel active:scale-95 transition-colors">
             <i class="ph ph-arrow-down"></i> Voltar ao final
         </button>
@@ -234,19 +229,21 @@
             <div class="max-w-4xl mx-auto relative group">
                 <div id="inputGlow" class="absolute -inset-0.5 bg-gradient-to-r from-app-accent/25 via-white/10 to-app-accent/15 rounded-2xl blur opacity-30 group-focus-within:opacity-70 transition duration-500"></div>
                 <div class="relative bg-app-panel border border-app-border focus-within:border-app-accent/30 rounded-2xl flex flex-col shadow-2xl transition-colors duration-300">
+                    <div id="attachChips" class="hidden flex-wrap gap-2 px-3 pt-3"></div>
                     <textarea id="input" rows="1" placeholder="Pergunte qualquer coisa…"
                         class="w-full bg-transparent text-app-textLight placeholder-app-text text-sm p-4 h-14 max-h-36 resize-none outline-none focus:ring-0 rounded-t-2xl leading-relaxed"></textarea>
+                    <input id="attachInput" type="file" multiple accept=".txt,.md,.csv,.json,.js,.ts,.py,.html,.css,.xml,.yml,.yaml,.log,image/*" class="hidden">
 
                     <div class="flex items-center justify-between p-2 pl-3 border-t border-white/5">
                         <div class="flex items-center gap-2">
                             <button id="btnAttach" class="flex items-center gap-1.5 text-xs text-app-text hover:text-app-textLight bg-white/5 hover:bg-white/10 px-3 py-1.5 rounded-lg transition-colors border border-transparent hover:border-white/10">
                                 <i class="ph ph-plus text-sm"></i> <span class="hidden sm:inline">Anexar</span>
                             </button>
-                            <button id="btnMic" class="w-8 h-8 flex items-center justify-center text-app-text hover:text-app-textLight bg-white/5 hover:bg-white/10 rounded-lg transition-colors border border-transparent hover:border-white/10" aria-label="Ditar">
+                            <button id="btnMic" class="w-8 h-8 flex items-center justify-center text-app-text hover:text-app-textLight bg-white/5 hover:bg-white/10 rounded-lg transition-colors border border-transparent hover:border-white/10" aria-label="Ditar" title="Ditar por voz">
                                 <i class="ph ph-microphone"></i>
                             </button>
-                            <button id="btnProvider" class="hidden sm:flex items-center gap-1.5 text-[11px] text-app-text hover:text-app-textLight bg-white/5 hover:bg-white/10 px-2.5 py-1.5 rounded-lg transition-colors border border-transparent hover:border-white/10" title="Provedor de IA">
-                                <span class="w-1.5 h-1.5 rounded-full bg-app-accent animate-pulse-soft"></span> <span id="providerLabel">Simulação local</span>
+                            <button id="btnProvider" class="hidden sm:flex items-center gap-1.5 text-[11px] text-app-text hover:text-app-textLight bg-white/5 hover:bg-white/10 px-2.5 py-1.5 rounded-lg transition-colors border border-transparent hover:border-white/10" title="Status do backend">
+                                <span class="w-1.5 h-1.5 rounded-full bg-app-accent animate-pulse-soft"></span> <span id="providerLabel">Conectado</span>
                             </button>
                         </div>
 
@@ -281,37 +278,34 @@
         </div>
 
         <div class="p-5 flex-1 overflow-y-auto space-y-6">
-            <div class="text-xs text-app-text">Ciclo atual: <span id="cycleLabel">1–31 de mai</span></div>
+            <div class="text-xs text-app-text">Ciclo atual: <span id="cycleLabel">—</span></div>
 
             <div>
                 <div class="flex items-end gap-2 mb-2">
-                    <span class="text-2xl font-light text-app-textLight" id="creditsNum">12.540</span>
+                    <span class="text-2xl font-light text-app-textLight" id="creditsNum">—</span>
                     <span class="text-sm text-app-text pb-1">créditos</span>
                     <span id="creditsLow" class="text-[10px] text-app-red bg-app-red/10 border border-app-red/30 rounded-full px-2 py-0.5 mb-1 hidden">baixo</span>
                 </div>
                 <div class="flex items-center justify-between text-xs text-app-text mb-2">
-                    <span>de 20.000</span>
-                    <span id="creditsPct">63%</span>
+                    <span>de <span id="creditsTotal">10.000</span></span>
+                    <span id="creditsPct">—</span>
                 </div>
                 <div class="w-full h-1.5 bg-white/10 rounded-full overflow-hidden">
-                    <div class="credit-bar h-full bg-app-accent rounded-full shadow-[0_0_8px_rgba(192,255,45,0.4)]" style="width: 63%;"></div>
+                    <div class="credit-bar h-full bg-app-accent rounded-full shadow-[0_0_8px_rgba(192,255,45,0.4)]" style="width: 0%;"></div>
                 </div>
-                <div class="text-[10px] text-app-text mt-2 text-right" id="renewLabel">Renova em 12 dias</div>
+                <div class="text-[10px] text-app-text mt-2 text-right" id="renewLabel">—</div>
             </div>
 
             <div class="bg-white/5 border border-app-border rounded-xl p-4 space-y-3">
-                <div class="text-xs font-medium text-app-text">Consumo por categoria</div>
+                <div class="text-xs font-medium text-app-text">Consumo por modelo</div>
                 <div id="usageBreakdown" class="space-y-3"></div>
             </div>
 
             <div class="space-y-3 pt-2">
                 <div class="flex items-center gap-1.5 text-xs text-app-text">
-                    Modelos e custos <i class="ph ph-info cursor-help hover:text-app-textLight" title="Valores estimados em R$/1M de tokens de entrada, apenas referência"></i>
+                    Modelos disponíveis <i class="ph ph-info cursor-help hover:text-app-textLight" title="Modelos servidos pelo backend via OpenRouter"></i>
                 </div>
                 <div id="modelList" class="space-y-2"></div>
-                <button id="btnManageModels" class="w-full text-xs text-app-textLight hover:bg-white/10 bg-white/5 border border-app-border rounded-lg py-2 mt-2 transition-colors active:scale-[0.99]">
-                    Gerenciar modelos
-                </button>
             </div>
         </div>
     </aside>
@@ -330,46 +324,11 @@
 
             <div class="p-5 space-y-5 max-h-[70vh] overflow-y-auto">
                 <section>
-                    <div class="text-xs font-medium text-app-text uppercase tracking-wider mb-3">Provedor de IA</div>
+                    <div class="text-xs font-medium text-app-text uppercase tracking-wider mb-3">Perfil</div>
                     <div class="space-y-2.5">
-                        <label class="flex items-start gap-3 p-3 rounded-xl border border-app-border bg-white/[0.02] cursor-pointer hover:border-white/20 transition-colors" data-mode="sim">
-                            <input type="radio" name="providerMode" value="sim" class="mt-1 accent-[#c0ff2d]">
-                            <span>
-                                <span class="block text-sm text-app-textLight font-medium">Simulação local</span>
-                                <span class="block text-xs text-app-text mt-0.5">Agentes demo com respostas embutidas, sem custo de API.</span>
-                            </span>
-                            <i class="ph-fill ph-check-circle text-app-accent ml-auto mt-0.5 mode-check hidden"></i>
-                        </label>
-                        <label class="flex items-start gap-3 p-3 rounded-xl border border-app-border bg-white/[0.02] cursor-pointer hover:border-white/20 transition-colors" data-mode="api">
-                            <input type="radio" name="providerMode" value="api" class="mt-1 accent-[#c0ff2d]">
-                            <span>
-                                <span class="block text-sm text-app-textLight font-medium">API compatível (OpenAI)</span>
-                                <span class="block text-xs text-app-text mt-0.5">OpenAI, OpenRouter, Ollama local ou qualquer endpoint /chat/completions.</span>
-                            </span>
-                            <i class="ph-fill ph-check-circle text-app-accent ml-auto mt-0.5 mode-check hidden"></i>
-                        </label>
-                    </div>
-
-                    <div id="apiFields" class="space-y-2.5 mt-3 opacity-40 pointer-events-none transition-opacity duration-300">
                         <div>
-                            <label class="text-xs text-app-text block mb-1" for="apiUrl">Base URL</label>
-                            <input id="apiUrl" type="url" placeholder="https://api.openai.com/v1" class="w-full bg-white/5 border border-app-border rounded-lg px-3 py-2 text-sm text-app-textLight placeholder-app-text outline-none focus:border-app-accent/40 transition-colors font-mono">
-                        </div>
-                        <div>
-                            <label class="text-xs text-app-text block mb-1" for="apiModel">Modelo</label>
-                            <input id="apiModel" type="text" placeholder="gpt-4o-mini" class="w-full bg-white/5 border border-app-border rounded-lg px-3 py-2 text-sm text-app-textLight placeholder-app-text outline-none focus:border-app-accent/40 transition-colors font-mono">
-                        </div>
-                        <div>
-                            <label class="text-xs text-app-text block mb-1" for="apiKey">API Key</label>
-                            <div class="relative">
-                                <input id="apiKey" type="password" placeholder="sk-…" class="w-full bg-white/5 border border-app-border rounded-lg px-3 py-2 pr-16 text-sm text-app-textLight placeholder-app-text outline-none focus:border-app-accent/40 transition-colors font-mono">
-                                <button id="keyToggle" type="button" class="absolute right-1.5 top-1/2 -translate-y-1/2 text-[10px] text-app-text hover:text-app-textLight bg-white/5 rounded px-2 py-1 transition-colors">mostrar</button>
-                            </div>
-                            <p class="text-[10px] text-app-text mt-1.5 flex items-center gap-1"><i class="ph ph-lock-key"></i> A chave fica apenas neste navegador (localStorage).</p>
-                        </div>
-                        <div class="flex items-center gap-2">
-                            <button id="btnTestApi" class="text-xs text-app-textLight bg-white/5 hover:bg-white/10 border border-app-border rounded-lg px-3 py-2 transition-colors active:scale-[0.98]">Testar conexão</button>
-                            <span id="apiStatus" class="text-[11px] text-app-text"></span>
+                            <label class="text-xs text-app-text block mb-1" for="prefName">Nome de exibição</label>
+                            <input id="prefName" type="text" class="w-full bg-white/5 border border-app-border rounded-lg px-3 py-2 text-sm text-app-textLight outline-none focus:border-app-accent/40 transition-colors">
                         </div>
                     </div>
                 </section>
@@ -377,14 +336,71 @@
                 <section class="pt-1">
                     <div class="text-xs font-medium text-app-text uppercase tracking-wider mb-3">Dados</div>
                     <div class="flex gap-2">
-                        <button id="btnResetDemo" class="flex-1 text-xs text-app-textLight bg-white/5 hover:bg-white/10 border border-app-border rounded-lg py-2 transition-colors">Restaurar demo</button>
-                        <button id="btnClearData" class="flex-1 text-xs text-app-red bg-app-red/10 hover:bg-app-red/20 border border-app-red/30 rounded-lg py-2 transition-colors">Apagar tudo</button>
+                        <button id="btnExportData" class="flex-1 text-xs text-app-textLight bg-white/5 hover:bg-white/10 border border-app-border rounded-lg py-2 transition-colors">Exportar conversas (.json)</button>
+                        <button id="btnClearData" class="flex-1 text-xs text-app-red bg-app-red/10 hover:bg-app-red/20 border border-app-red/30 rounded-lg py-2 transition-colors">Apagar conversas</button>
                     </div>
                 </section>
             </div>
 
             <div class="px-5 py-3.5 border-t border-app-border flex items-center justify-end gap-2">
                 <button id="settingsSave" class="glow-btn text-sm text-black bg-app-accent hover:bg-[#a9e625] font-medium rounded-lg px-4 py-2 transition-all active:scale-[0.98]">Salvar</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Agents Modal -->
+    <div id="agentsModal" class="hidden fixed inset-0 z-50 items-center justify-center p-4" role="dialog" aria-modal="true">
+        <div class="modal-backdrop absolute inset-0 bg-black/70 backdrop-blur-sm"></div>
+        <div class="relative w-full max-w-lg bg-app-panel border border-app-border rounded-2xl shadow-2xl modal-panel overflow-hidden">
+            <div class="flex items-center justify-between px-5 py-4 border-b border-app-border">
+                <div class="flex items-center gap-2.5">
+                    <i class="ph-fill ph-robot text-app-accent"></i>
+                    <h2 class="text-sm font-medium text-app-textLight">Agentes</h2>
+                </div>
+                <div class="flex items-center gap-2">
+                    <button id="btnNewAgent" class="text-xs text-black bg-app-accent hover:bg-[#a9e625] font-medium rounded-lg px-3 py-1.5 transition-colors flex items-center gap-1.5"><i class="ph ph-plus"></i> Novo agente</button>
+                    <button data-close="agentsModal" class="w-7 h-7 flex items-center justify-center text-app-text hover:text-app-textLight rounded-md hover:bg-white/5 transition-colors" aria-label="Fechar"><i class="ph ph-x"></i></button>
+                </div>
+            </div>
+            <div class="p-5 max-h-[65vh] overflow-y-auto" id="agentsList"></div>
+        </div>
+    </div>
+
+    <!-- Agent Editor Modal -->
+    <div id="agentEditorModal" class="hidden fixed inset-0 z-[55] items-center justify-center p-4" role="dialog" aria-modal="true">
+        <div class="modal-backdrop absolute inset-0 bg-black/70 backdrop-blur-sm"></div>
+        <div class="relative w-full max-w-md bg-app-panel border border-app-border rounded-2xl shadow-2xl modal-panel overflow-hidden">
+            <div class="flex items-center justify-between px-5 py-4 border-b border-app-border">
+                <h2 id="agentEditorTitle" class="text-sm font-medium text-app-textLight">Novo agente</h2>
+                <button data-close="agentEditorModal" class="w-7 h-7 flex items-center justify-center text-app-text hover:text-app-textLight rounded-md hover:bg-white/5 transition-colors" aria-label="Fechar"><i class="ph ph-x"></i></button>
+            </div>
+            <div class="p-5 space-y-3.5 max-h-[70vh] overflow-y-auto">
+                <input type="hidden" id="agentEditId">
+                <div>
+                    <label class="text-xs text-app-text block mb-1" for="agentEditName">Nome</label>
+                    <input id="agentEditName" type="text" placeholder="Ex.: Revisor de código" class="w-full bg-white/5 border border-app-border rounded-lg px-3 py-2 text-sm text-app-textLight placeholder-app-text outline-none focus:border-app-accent/40 transition-colors">
+                </div>
+                <div>
+                    <label class="text-xs text-app-text block mb-1" for="agentEditDesc">Descrição curta</label>
+                    <input id="agentEditDesc" type="text" placeholder="O que este agente faz" class="w-full bg-white/5 border border-app-border rounded-lg px-3 py-2 text-sm text-app-textLight placeholder-app-text outline-none focus:border-app-accent/40 transition-colors">
+                </div>
+                <div>
+                    <label class="text-xs text-app-text block mb-1" for="agentEditIcon">Ícone (Phosphor, ex.: ph-robot)</label>
+                    <input id="agentEditIcon" type="text" placeholder="ph-robot" class="w-full bg-white/5 border border-app-border rounded-lg px-3 py-2 text-sm text-app-textLight placeholder-app-text outline-none focus:border-app-accent/40 transition-colors font-mono">
+                </div>
+                <div>
+                    <label class="text-xs text-app-text block mb-1" for="agentEditModel">Modelo preferido</label>
+                    <select id="agentEditModel" class="w-full bg-white/5 border border-app-border rounded-lg px-3 py-2 text-sm text-app-textLight outline-none focus:border-app-accent/40 transition-colors"></select>
+                </div>
+                <div>
+                    <label class="text-xs text-app-text block mb-1" for="agentEditPrompt">System prompt</label>
+                    <textarea id="agentEditPrompt" rows="6" placeholder="Você é…" class="w-full bg-white/5 border border-app-border rounded-lg px-3 py-2 text-sm text-app-textLight placeholder-app-text outline-none focus:border-app-accent/40 transition-colors resize-y font-mono text-xs"></textarea>
+                </div>
+            </div>
+            <div class="px-5 py-3.5 border-t border-app-border flex items-center justify-end gap-2">
+                <button id="agentEditDelete" class="hidden mr-auto text-xs text-app-red bg-app-red/10 hover:bg-app-red/20 border border-app-red/30 rounded-lg px-3 py-2 transition-colors">Excluir</button>
+                <button data-close="agentEditorModal" class="text-xs text-app-textLight bg-white/5 hover:bg-white/10 border border-app-border rounded-lg px-4 py-2 transition-colors">Cancelar</button>
+                <button id="agentEditSave" class="glow-btn text-sm text-black bg-app-accent hover:bg-[#a9e625] font-medium rounded-lg px-4 py-2 transition-all active:scale-[0.98]">Salvar</button>
             </div>
         </div>
     </div>
@@ -422,6 +438,8 @@
     <!-- Toasts -->
     <div id="toasts" class="fixed bottom-20 right-4 z-[60] flex flex-col gap-2 items-end pointer-events-none"></div>
 
+    <script src="js/config.js"></script>
+    <script src="js/db.js"></script>
     <script src="js/app.js"></script>
 </body>
 </html>
