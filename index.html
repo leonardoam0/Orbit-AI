@@ -11,6 +11,7 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
     <script src="https://unpkg.com/@phosphor-icons/web"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script>
         tailwind.config = {
             darkMode: 'class',
@@ -111,7 +112,7 @@
         <div class="p-4 border-t border-app-border space-y-1">
             <button id="navAgents" class="w-full flex items-center gap-3 px-2 py-2 rounded-md hover:bg-white/5 text-sm transition-colors text-app-text hover:text-app-textLight">
                 <i class="ph ph-robot"></i> Agentes
-                <span class="ml-auto text-[10px] bg-white/5 border border-app-border rounded-full px-1.5 py-0.5">em breve</span>
+                <span class="ml-auto text-[10px] bg-white/5 border border-app-border rounded-full px-1.5 py-0.5">beta</span>
             </button>
             <button id="navCredits" class="w-full flex items-center gap-3 px-2 py-2 rounded-md hover:bg-white/5 text-sm transition-colors text-app-text hover:text-app-textLight">
                 <i class="ph ph-coins"></i> Créditos e tokens
@@ -129,8 +130,8 @@
                         <span class="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 bg-app-accent border-2 border-app-bg rounded-full"></span>
                     </div>
                     <div class="text-left">
-                        <div class="text-sm font-medium text-app-textLight leading-tight">Leonardo Oliveira</div>
-                        <div class="text-xs text-app-text">leo@eco.team</div>
+                        <div id="accountName" class="text-sm font-medium text-app-textLight leading-tight">Visitante</div>
+                        <div id="accountEmail" class="text-xs text-app-text">Entre para começar</div>
                     </div>
                 </div>
                 <i class="ph ph-caret-up text-app-text transition-transform duration-200" id="accountCaret"></i>
@@ -316,6 +317,30 @@
         </div>
     </aside>
 
+    <!-- Auth Modal -->
+    <div id="authModal" class="hidden fixed inset-0 z-[70] items-center justify-center p-4" role="dialog" aria-modal="true" aria-labelledby="authTitle">
+        <div class="modal-backdrop absolute inset-0 bg-black/80 backdrop-blur-sm"></div>
+        <div class="relative w-full max-w-sm bg-app-panel border border-app-border rounded-2xl shadow-2xl overflow-hidden">
+            <div class="px-5 py-4 border-b border-app-border">
+                <div class="flex items-center gap-2.5">
+                    <i class="ph-fill ph-lock-key text-app-accent"></i>
+                    <h2 id="authTitle" class="text-sm font-medium text-app-textLight">Entrar no OrbitAI</h2>
+                </div>
+                <p class="text-xs text-app-text mt-1.5">Sua conta e suas conversas ficam protegidas por autenticação real.</p>
+            </div>
+            <form id="authForm" class="p-5 space-y-3">
+                <input id="authName" type="text" autocomplete="name" placeholder="Nome (somente ao criar conta)" class="w-full bg-white/5 border border-app-border rounded-lg px-3 py-2.5 text-sm text-app-textLight placeholder-app-text outline-none focus:border-app-accent/40">
+                <input id="authEmail" type="email" autocomplete="email" required placeholder="seu@email.com" class="w-full bg-white/5 border border-app-border rounded-lg px-3 py-2.5 text-sm text-app-textLight placeholder-app-text outline-none focus:border-app-accent/40">
+                <input id="authPassword" type="password" autocomplete="current-password" minlength="8" required placeholder="Senha (mínimo de 8 caracteres)" class="w-full bg-white/5 border border-app-border rounded-lg px-3 py-2.5 text-sm text-app-textLight placeholder-app-text outline-none focus:border-app-accent/40">
+                <div id="authStatus" class="text-xs text-app-text min-h-4"></div>
+                <div class="flex gap-2 pt-1">
+                    <button type="button" id="authSignUp" class="flex-1 text-xs text-app-textLight bg-white/5 hover:bg-white/10 border border-app-border rounded-lg py-2.5">Criar conta</button>
+                    <button type="submit" id="authSignIn" class="flex-1 glow-btn text-xs text-black bg-app-accent hover:bg-[#a9e625] font-medium rounded-lg py-2.5">Entrar</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
     <!-- Settings Modal -->
     <div id="settingsModal" class="hidden fixed inset-0 z-50 items-center justify-center p-4" role="dialog" aria-modal="true" aria-labelledby="settingsTitle">
         <div class="modal-backdrop absolute inset-0 bg-black/70 backdrop-blur-sm"></div>
@@ -332,11 +357,11 @@
                 <section>
                     <div class="text-xs font-medium text-app-text uppercase tracking-wider mb-3">Provedor de IA</div>
                     <div class="space-y-2.5">
-                        <label class="flex items-start gap-3 p-3 rounded-xl border border-app-border bg-white/[0.02] cursor-pointer hover:border-white/20 transition-colors" data-mode="sim">
-                            <input type="radio" name="providerMode" value="sim" class="mt-1 accent-[#c0ff2d]">
+                        <label class="flex items-start gap-3 p-3 rounded-xl border border-app-accent/30 bg-app-accent/[0.04] cursor-pointer hover:border-app-accent/50 transition-colors" data-mode="backend">
+                            <input type="radio" name="providerMode" value="backend" class="mt-1 accent-[#c0ff2d]">
                             <span>
-                                <span class="block text-sm text-app-textLight font-medium">Simulação local</span>
-                                <span class="block text-xs text-app-text mt-0.5">Agentes demo com respostas embutidas, sem custo de API.</span>
+                                <span class="block text-sm text-app-textLight font-medium">Orbit Backend</span>
+                                <span class="block text-xs text-app-text mt-0.5">Provedores são chamados no servidor; as chaves não ficam no navegador.</span>
                             </span>
                             <i class="ph-fill ph-check-circle text-app-accent ml-auto mt-0.5 mode-check hidden"></i>
                         </label>
@@ -365,7 +390,7 @@
                                 <input id="apiKey" type="password" placeholder="sk-…" class="w-full bg-white/5 border border-app-border rounded-lg px-3 py-2 pr-16 text-sm text-app-textLight placeholder-app-text outline-none focus:border-app-accent/40 transition-colors font-mono">
                                 <button id="keyToggle" type="button" class="absolute right-1.5 top-1/2 -translate-y-1/2 text-[10px] text-app-text hover:text-app-textLight bg-white/5 rounded px-2 py-1 transition-colors">mostrar</button>
                             </div>
-                            <p class="text-[10px] text-app-text mt-1.5 flex items-center gap-1"><i class="ph ph-lock-key"></i> A chave fica apenas neste navegador (localStorage).</p>
+                            <p class="text-[10px] text-app-text mt-1.5 flex items-center gap-1"><i class="ph ph-lock-key"></i> A chave é enviada ao backend e armazenada cifrada; nunca é devolvida.</p>
                         </div>
                         <div class="flex items-center gap-2">
                             <button id="btnTestApi" class="text-xs text-app-textLight bg-white/5 hover:bg-white/10 border border-app-border rounded-lg px-3 py-2 transition-colors active:scale-[0.98]">Testar conexão</button>
@@ -377,7 +402,7 @@
                 <section class="pt-1">
                     <div class="text-xs font-medium text-app-text uppercase tracking-wider mb-3">Dados</div>
                     <div class="flex gap-2">
-                        <button id="btnResetDemo" class="flex-1 text-xs text-app-textLight bg-white/5 hover:bg-white/10 border border-app-border rounded-lg py-2 transition-colors">Restaurar demo</button>
+                        <button id="btnResetDemo" class="flex-1 text-xs text-app-textLight bg-white/5 hover:bg-white/10 border border-app-border rounded-lg py-2 transition-colors">Limpar cache local</button>
                         <button id="btnClearData" class="flex-1 text-xs text-app-red bg-app-red/10 hover:bg-app-red/20 border border-app-red/30 rounded-lg py-2 transition-colors">Apagar tudo</button>
                     </div>
                 </section>
@@ -422,6 +447,8 @@
     <!-- Toasts -->
     <div id="toasts" class="fixed bottom-20 right-4 z-[60] flex flex-col gap-2 items-end pointer-events-none"></div>
 
+    <script src="js/orbit-config.js"></script>
+    <script src="js/orbit-backend.js"></script>
     <script src="js/app.js"></script>
 </body>
 </html>
