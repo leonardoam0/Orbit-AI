@@ -1,7 +1,7 @@
 /* ============================================================
    OrbitAI — app.js
-   Estado, chat, providers (simulação / API), navegação, modais.
-   Vanilla JS, sem dependências. Compatível com file://.
+   Estado, autenticação, chat por streaming, provedores e navegação.
+   Vanilla JS de interface; o processamento de IA ocorre no backend..
    ============================================================ */
 (function () {
   'use strict';
@@ -809,7 +809,7 @@
     $('#authSignUp')?.addEventListener('click', () => authenticate('signup'));
     $('#authModal')?.addEventListener('click', (e) => { if (e.target.id === 'authModal' || e.target.classList.contains('modal-backdrop')) closeAuth(); });
     $('#settingsSave').addEventListener('click', saveSettings);
-    $('#btnResetDemo').addEventListener('click', () => { if (confirm('Restaurar a conversa de demonstração?')) { state = { ...seedState() }; saveState(); rerenderAll(); toast('Demo restaurada.'); closeSettings(); } });
+    $('#btnResetDemo').addEventListener('click', () => { if (confirm('Limpar o estado local deste navegador?')) { state = { ...seedState() }; saveState(); rerenderAll(); toast('Estado local limpo.'); closeSettings(); } });
     $('#btnClearData').addEventListener('click', () => {
       if (confirm('Apagar todas as conversas e dados locais?')) { localStorage.removeItem(STORAGE_KEY); location.reload(); }
     });
@@ -966,8 +966,8 @@
 
   function providerLabel() {
     const p = state.provider;
-    if (p.mode === 'api') return 'API externa — ' + (p.model || 'modelo personalizado');
-    return 'Simulação local (exemplos embutidos)';
+    if (activeProvider() === 'backend') return 'Orbit Backend — ' + (p.model || 'modelo configurado');
+    return 'Login necessário';
   }
 
   function billingSummaryText() {
@@ -975,9 +975,9 @@
     const b = usageBreakdownData();
     return [
       'OrbitAI — Resumo de cobrança',
-      'Plano: Equipe Pro (' + CREDIT_TOTAL.toLocaleString('pt-BR') + ' créditos por ciclo)',
+      'Plano: Equipe Pro (' + CREDIT_TOTAL.toLocaleString('pt-BR') + ' tokens por ciclo)',
       'Ciclo: ' + info.cycle + ' · ' + info.renew,
-      'Créditos restantes: ' + info.remaining.toLocaleString('pt-BR') + ' (' + info.pct + '%)',
+      'Tokens restantes: ' + info.remaining.toLocaleString('pt-BR') + ' (' + info.pct + '%)',
       'Consumo — Modelos: ' + b.modelsTokens.toLocaleString('pt-BR') + ' · Ferramentas: ' + b.tools.toLocaleString('pt-BR') + ' · Armazenamento: ' + b.storage.toLocaleString('pt-BR') + ' · Total: ' + b.total.toLocaleString('pt-BR'),
     ].join('\n');
   }
@@ -990,13 +990,13 @@
       '<div class="flex items-center gap-3">' +
       '<div class="w-11 h-11 rounded-full bg-purple-500/20 text-purple-400 flex items-center justify-center font-medium text-sm border border-purple-500/30">LO</div>' +
       '<div class="min-w-0">' +
-      '<div class="text-sm font-medium text-app-textLight">Conta OrbitAI <span class="text-app-text font-normal">· demonstração</span></div>' +
+      '<div class="text-sm font-medium text-app-textLight">Conta OrbitAI <span class="text-app-text font-normal">· autenticada</span></div>' +
       '<div class="text-xs text-app-text mt-0.5">Workspace: ' + escapeHtml(state.workspace || '—') + '</div>' +
       '</div></div>' +
       '<div class="rounded-xl border border-app-border bg-white/[0.03] p-3.5 space-y-2.5 text-xs">' +
       '<div class="flex items-center justify-between"><span class="text-app-text">Plano</span><span class="text-app-textLight">Equipe Pro</span></div>' +
       '<div class="flex items-center justify-between"><span class="text-app-text">Ciclo atual</span><span class="text-app-textLight">' + info.cycle + '</span></div>' +
-      '<div class="flex items-center justify-between"><span class="text-app-text">Créditos restantes</span><span class="text-app-textLight font-mono">' + formatNumber(info.remaining) + ' <span class="text-app-text">(' + info.pct + '%)</span></span></div>' +
+      '<div class="flex items-center justify-between"><span class="text-app-text">Tokens restantes</span><span class="text-app-textLight font-mono">' + formatNumber(info.remaining) + ' <span class="text-app-text">(' + info.pct + '%)</span></span></div>' +
       '<div class="flex items-center justify-between"><span class="text-app-text">Renovação</span><span class="text-app-textLight">' + info.renew + '</span></div>' +
       '<div class="flex items-center justify-between gap-3"><span class="text-app-text shrink-0">Provedor ativo</span><span class="text-app-textLight text-right min-w-0 truncate">' + escapeHtml(providerLabel()) + '</span></div>' +
       '<div class="flex items-center justify-between"><span class="text-app-text">Modelo</span><span class="text-app-textLight">' + escapeHtml(model ? model.name : (state.model || '—')) + '</span></div>' +
@@ -1037,9 +1037,9 @@
     const b = usageBreakdownData();
     $('#billingBody').innerHTML =
       '<div class="rounded-xl border border-app-accent/30 bg-app-accent/10 p-3.5 text-xs space-y-1.5">' +
-      '<div class="flex items-center gap-2 text-app-textLight font-medium"><i class="ph ph-rocket text-app-accent"></i> Plano Equipe Pro — ' + formatNumber(CREDIT_TOTAL) + ' créditos por ciclo</div>' +
+      '<div class="flex items-center gap-2 text-app-textLight font-medium"><i class="ph ph-rocket text-app-accent"></i> Plano Equipe Pro — ' + formatNumber(CREDIT_TOTAL) + ' tokens por ciclo</div>' +
       '<div class="text-app-text">' + info.cycle + ' · ' + info.renew + '</div>' +
-      '<div class="text-app-text">Restam <span class="text-app-textLight font-mono">' + formatNumber(info.remaining) + ' créditos</span> (' + info.pct + '%).</div>' +
+      '<div class="text-app-text">Restam <span class="text-app-textLight font-mono">' + formatNumber(info.remaining) + ' tokens</span> (' + info.pct + '%).</div>' +
       '</div>' +
       '<div class="rounded-xl border border-app-border bg-white/[0.03] p-3.5 text-xs space-y-2">' +
       '<div class="font-medium text-app-textLight">Consumo do ciclo</div>' +
