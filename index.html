@@ -317,6 +317,31 @@
         </div>
     </aside>
 
+    <!-- Agents Modal -->
+    <div id="agentsModal" class="hidden fixed inset-0 z-[65] items-center justify-center p-4" role="dialog" aria-modal="true" aria-labelledby="agentsTitle">
+        <div class="modal-backdrop absolute inset-0 bg-black/80 backdrop-blur-sm"></div>
+        <div class="relative w-full max-w-lg bg-app-panel border border-app-border rounded-2xl shadow-2xl overflow-hidden">
+            <div class="flex items-center justify-between px-5 py-4 border-b border-app-border">
+                <div>
+                    <h2 id="agentsTitle" class="text-sm font-medium text-app-textLight">Agentes da workspace</h2>
+                    <p class="text-xs text-app-text mt-1">Cada agente usa seu próprio prompt e modelo configurado.</p>
+                </div>
+                <button id="agentsClose" class="w-7 h-7 flex items-center justify-center text-app-text hover:text-app-textLight rounded-md hover:bg-white/5" aria-label="Fechar"><i class="ph ph-x"></i></button>
+            </div>
+            <div class="p-5 space-y-4 max-h-[70vh] overflow-y-auto">
+                <div id="agentsStatus" class="text-xs text-app-text"></div>
+                <div id="agentsList" class="space-y-2"></div>
+                <form id="agentForm" class="space-y-2.5 border-t border-app-border pt-4">
+                    <div class="text-xs font-medium text-app-text uppercase tracking-wider">Criar agente</div>
+                    <input id="agentName" required minlength="2" maxlength="100" placeholder="Nome do agente" class="w-full bg-white/5 border border-app-border rounded-lg px-3 py-2 text-sm text-app-textLight placeholder-app-text outline-none focus:border-app-accent/40">
+                    <textarea id="agentPrompt" required minlength="10" maxlength="12000" rows="4" placeholder="Prompt de sistema: função, tom, limites e contexto..." class="w-full bg-white/5 border border-app-border rounded-lg px-3 py-2 text-sm text-app-textLight placeholder-app-text outline-none focus:border-app-accent/40 resize-y"></textarea>
+                    <input id="agentModel" maxlength="160" placeholder="Modelo (opcional; usa o provedor padrão)" class="w-full bg-white/5 border border-app-border rounded-lg px-3 py-2 text-sm text-app-textLight placeholder-app-text outline-none focus:border-app-accent/40 font-mono">
+                    <button class="w-full glow-btn text-sm text-black bg-app-accent hover:bg-[#a9e625] font-medium rounded-lg px-4 py-2">Criar agente real</button>
+                </form>
+            </div>
+        </div>
+    </div>
+
     <!-- Auth Modal -->
     <div id="authModal" class="hidden fixed inset-0 z-[70] items-center justify-center p-4" role="dialog" aria-modal="true" aria-labelledby="authTitle">
         <div class="modal-backdrop absolute inset-0 bg-black/80 backdrop-blur-sm"></div>
