@@ -350,6 +350,74 @@
   /* ----------------------------------------------------------
      Backend / autenticação
   ---------------------------------------------------------- */
+  async function refreshAgents() {
+    const status = $('#agentsStatus');
+    const list = $('#agentsList');
+    if (!window.OrbitBackend?.configured || !state.backend?.workspaceId) {
+      if (status) status.textContent = 'Entre em uma conta para carregar agentes.';
+      return;
+    }
+    if (status) status.textContent = 'Carregando agentes…';
+    try {
+      const agents = await window.OrbitBackend.listAgents(state.backend.workspaceId);
+      list.innerHTML = agents.map((agent) =>
+        '<button data-agent-id="' + escapeHtml(agent.id) + '" class="w-full text-left rounded-xl border ' +
+        (agent.id === state.backend.agentId ? 'border-app-accent/50 bg-app-accent/10' : 'border-app-border bg-white/[0.02] hover:bg-white/5') +
+        ' p-3 transition-colors">' +
+        '<div class="flex items-center justify-between gap-2"><span class="text-sm text-app-textLight font-medium">' + escapeHtml(agent.name) + '</span>' +
+        (agent.is_default ? '<span class="text-[10px] text-app-accent">padrão</span>' : '') + '</div>' +
+        '<div class="text-xs text-app-text mt-1">' + escapeHtml(agent.description || agent.system_prompt.slice(0, 120)) + '</div>' +
+        '</button>'
+      ).join('');
+      if (!agents.length) list.innerHTML = '<div class="text-xs text-app-text">Nenhum agente encontrado.</div>';
+      if (status) status.textContent = agents.length + ' agente(s) disponível(is).';
+    } catch (error) {
+      if (status) status.textContent = 'Falha ao carregar agentes: ' + (error.message || 'erro desconhecido');
+    }
+  }
+
+  async function openAgents() {
+    if (!window.OrbitBackend?.configured) {
+      toast('Configure o Supabase antes de usar agentes.', 'warn');
+      return;
+    }
+    if (!state.backend?.workspaceId) {
+      openAuth();
+      return;
+    }
+    const modal = $('#agentsModal');
+    modal.classList.remove('hidden');
+    modal.classList.add('flex');
+    await refreshAgents();
+  }
+
+  function closeAgents() {
+    const modal = $('#agentsModal');
+    modal.classList.add('hidden');
+    modal.classList.remove('flex');
+  }
+
+  async function createAgentFromForm(event) {
+    event.preventDefault();
+    const status = $('#agentsStatus');
+    try {
+      const result = await window.OrbitBackend.createAgent({
+        workspace_id: state.backend.workspaceId,
+        name: $('#agentName').value.trim(),
+        system_prompt: $('#agentPrompt').value.trim(),
+        model: $('#agentModel').value.trim(),
+      });
+      if (result.agent?.id) state.backend.agentId = result.agent.id;
+      saveState();
+      $('#agentForm').reset();
+      await refreshAgents();
+      toast('Agente criado e selecionado.', 'success');
+    } catch (error) {
+      if (status) status.textContent = 'Não foi possível criar o agente: ' + (error.message || 'erro desconhecido');
+    }
+  }
+
+
   function openAuth() {
     const modal = $('#authModal');
     if (!modal) return;
@@ -755,7 +823,11 @@
     $('#backdrop').addEventListener('click', closeDrawers);
 
     // Navegação
-    $('#navAgents').addEventListener('click', () => toast('Agentes estão disponíveis no backend; o editor visual será o próximo módulo.', 'info'));
+    $('#navAgents').addEventListener('click', openAgents);
+    $('#agentsClose')?.addEventListener('click', closeAgents);
+    $('#agentsModal')?.addEventListener('click', (e) => { if (e.target.id === 'agentsModal' || e.target.classList.contains('modal-backdrop')) closeAgents(); });
+    $('#agentsList')?.addEventListener('click', (e) => { const item = e.target.closest('[data-agent-id]'); if (!item) return; state.backend.agentId = item.dataset.agentId; saveState(); closeAgents(); toast('Agente selecionado.', 'success'); });
+    $('#agentForm')?.addEventListener('submit', createAgentFromForm);
     const creditNav = $('#navCredits');
     creditNav.addEventListener('click', () => {
       const panel = $('#rightSidebar');
@@ -792,6 +864,7 @@
         if (!$('#billingModal').classList.contains('hidden')) closeModal('billingModal');
         else if (!$('#profileModal').classList.contains('hidden')) closeModal('profileModal');
         else if (!$('#settingsModal').classList.contains('hidden')) closeSettings();
+        else if (!$('#agentsModal').classList.contains('hidden')) closeAgents();
       }
     });
 
