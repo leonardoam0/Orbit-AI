@@ -520,7 +520,7 @@
     placeholder.className = 'flex gap-4 max-w-4xl msg-enter';
     placeholder.innerHTML =
       '<div class="w-8 h-8 rounded-lg bg-white/5 border border-white/10 flex items-center justify-center text-app-textLight flex-shrink-0 mt-1"><i class="ph-fill ph-robot text-lg"></i></div>' +
-      '<div class="flex-1 min-w-0"><div class="flex items-center gap-2 text-xs text-app-text mb-2"><span class="font-medium text-app-textLight">Devin</span> ' +
+      '<div class="flex-1 min-w-0"><div class="flex items-center gap-2 text-xs text-app-text mb-2"><span class="font-medium text-app-textLight">Orbit Assistant</span> ' +
       '<span class="typing-dots"><span></span><span></span><span></span></span></div>' +
       '<div class="prose stream-target text-app-text text-sm italic">Pensando…</div></div>';
     chat.appendChild(placeholder);
@@ -927,7 +927,7 @@
 
   function convoToMarkdown(c) {
     let out = '# ' + c.title + '\n\n';
-    c.messages.forEach((m) => { out += (m.role === 'user' ? '## Você\n\n' : '## Devin\n\n') + m.content + '\n\n---\n\n'; });
+    c.messages.forEach((m) => { out += (m.role === 'user' ? '## Você\n\n' : '## Orbit Assistant\n\n') + m.content + '\n\n---\n\n'; });
     return out;
   }
   function copyConvo() {
